@@ -2,31 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── CSS Variables (n8n-inspired dark theme) ──────────────────── */
+/* ── CSS Variables (White + Pink theme) ───────────────────────── */
 
 :root {
-  --color-canvas: #1b1b2f;
-  --color-canvas-dot: #2a2a42;
-  --color-surface: #232338;
-  --color-surface-hover: #2c2c44;
-  --color-panel: #1e1e32;
-  --color-panel-header: #262640;
-  --color-border: #333352;
-  --color-border-light: #2a2a45;
-  --color-text: #e0e0ec;
-  --color-text-secondary: #9494b0;
-  --color-text-muted: #5e5e7a;
-  --color-accent: #ff6d5a;
-  --color-accent-hover: #ff8570;
-  --color-node-bg: #262640;
-  --color-node-border: #363655;
-  --color-node-hover: #2e2e4a;
-  --color-success: #4cd964;
-  --color-error: #ff3b5c;
-  --color-warning: #ffcc00;
-  --color-running: #1fa8f2;
-  --color-connection: #5e5e7a;
-  --color-connection-hover: #8888a8;
+  --color-canvas: #f8f5f7;
+  --color-canvas-dot: #e8dfe5;
+  --color-surface: #ffffff;
+  --color-surface-hover: #fdf0f4;
+  --color-panel: #ffffff;
+  --color-panel-header: #fef7f9;
+  --color-border: #f0dce4;
+  --color-border-light: #f5e6ec;
+  --color-text: #2d1f2a;
+  --color-text-secondary: #7a6573;
+  --color-text-muted: #b8a3b0;
+  --color-accent: #e84393;
+  --color-accent-hover: #d63384;
+  --color-accent-light: rgba(232, 67, 147, 0.08);
+  --color-node-bg: #ffffff;
+  --color-node-border: #f0dce4;
+  --color-node-hover: #fef7f9;
+  --color-success: #2ecc71;
+  --color-error: #e74c3c;
+  --color-warning: #f39c12;
+  --color-running: #3498db;
+  --color-connection: #d4bfc8;
+  --color-connection-hover: #c9a1b2;
 }
 
 /* ── Base ───────────────────────────────────────────────────────── */
@@ -46,7 +47,7 @@ body {
   user-select: none;
 }
 
-/* ── React Flow Overrides (n8n style) ──────────────────────────── */
+/* ── React Flow Overrides ──────────────────────────────────────── */
 
 .react-flow__pane {
   cursor: grab !important;
@@ -73,7 +74,7 @@ body {
 
 .react-flow__edge:hover .react-flow__edge-path,
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: var(--color-connection-hover) !important;
+  stroke: var(--color-accent) !important;
   stroke-width: 2.5 !important;
 }
 
@@ -96,7 +97,7 @@ body {
 
 .react-flow__handle:hover {
   transform: scale(1.5) !important;
-  box-shadow: 0 0 0 4px rgba(255, 109, 90, 0.25);
+  box-shadow: 0 0 0 4px rgba(232, 67, 147, 0.2);
 }
 
 /* Connection line while dragging */
@@ -112,13 +113,14 @@ body {
   border: 1px solid var(--color-border) !important;
   border-radius: 12px !important;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
 }
 
 .react-flow__controls-button {
   background: transparent !important;
   border-bottom: 1px solid var(--color-border-light) !important;
-  fill: var(--color-text-secondary) !important;
+  fill: var(--color-text-muted) !important;
+  color: var(--color-text-muted) !important;
   width: 34px !important;
   height: 34px !important;
   padding: 8px !important;
@@ -126,7 +128,7 @@ body {
 
 .react-flow__controls-button:hover {
   background: var(--color-surface-hover) !important;
-  fill: var(--color-text) !important;
+  fill: var(--color-accent) !important;
 }
 
 .react-flow__controls-button:last-child {
@@ -138,7 +140,7 @@ body {
   background: var(--color-panel) !important;
   border: 1px solid var(--color-border) !important;
   border-radius: 12px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
 }
 
 /* Hide attribution */
@@ -151,41 +153,41 @@ body {
 .ppn-node {
   background: var(--color-node-bg);
   border: 1.5px solid var(--color-node-border);
-  border-radius: 10px;
+  border-radius: 12px;
   min-width: 180px;
   max-width: 260px;
   overflow: visible;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
   position: relative;
 }
 
 .ppn-node:hover {
-  border-color: #4a4a6a;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  border-color: #e8c1d4;
+  box-shadow: 0 4px 16px rgba(232, 67, 147, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .ppn-node.ppn-node--selected {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px rgba(255, 109, 90, 0.2), 0 6px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px rgba(232, 67, 147, 0.12), 0 4px 16px rgba(232, 67, 147, 0.08);
 }
 
 .ppn-node.ppn-node--running {
   border-color: var(--color-running);
-  box-shadow: 0 0 0 2px rgba(31, 168, 242, 0.15), 0 6px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1), 0 4px 16px rgba(52, 152, 219, 0.08);
 }
 
 .ppn-node.ppn-node--error {
   border-color: var(--color-error);
-  box-shadow: 0 0 0 2px rgba(255, 59, 92, 0.15), 0 6px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1), 0 4px 16px rgba(231, 76, 60, 0.08);
 }
 
 .ppn-node.ppn-node--done {
   border-color: var(--color-success);
-  box-shadow: 0 0 0 1px rgba(76, 217, 100, 0.15), 0 6px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.1), 0 4px 16px rgba(46, 204, 113, 0.06);
 }
 
-/* ── Status Badge (top-right corner like n8n) ──────────────────── */
+/* ── Status Badge ──────────────────────────────────────────────── */
 
 .ppn-status-badge {
   position: absolute;
@@ -197,7 +199,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--color-node-bg);
+  border: 2.5px solid var(--color-node-bg);
   z-index: 10;
 }
 
@@ -217,19 +219,9 @@ body {
   to { transform: translateX(0); opacity: 1; }
 }
 
-@keyframes slideOutLeft {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(-100%); opacity: 0; }
-}
-
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideOutRight {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
 }
 
 @keyframes scaleIn {
@@ -238,30 +230,16 @@ body {
 }
 
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(31, 168, 242, 0.3); }
-  70% { box-shadow: 0 0 0 6px rgba(31, 168, 242, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(31, 168, 242, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.3); }
+  70% { box-shadow: 0 0 0 6px rgba(52, 152, 219, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.2s ease-out;
-}
-
-.animate-slide-in-left {
-  animation: slideInLeft 0.25s ease-out;
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.25s ease-out;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.15s ease-out;
-}
-
-.animate-pulse-ring {
-  animation: pulse-ring 1.5s ease-out infinite;
-}
+.animate-fade-in { animation: fadeIn 0.2s ease-out; }
+.animate-slide-in-left { animation: slideInLeft 0.25s ease-out; }
+.animate-slide-in-right { animation: slideInRight 0.25s ease-out; }
+.animate-scale-in { animation: scaleIn 0.15s ease-out; }
+.animate-pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }
 
 /* ── Scrollbar ─────────────────────────────────────────────────── */
 
@@ -275,12 +253,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-text-muted);
 }
 
 /* ── Overlay backdrop ──────────────────────────────────────────── */
@@ -288,31 +266,31 @@ body {
 .overlay-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(45, 31, 42, 0.15);
+  backdrop-filter: blur(2px);
   z-index: 40;
 }
 
-/* ── Add node button (floating on canvas) ─────────────────────── */
+/* ── Add node button ──────────────────────────────────────────── */
 
 .add-node-btn {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: linear-gradient(135deg, #e84393, #fd79a8);
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 4px 16px rgba(255, 109, 90, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  box-shadow: 0 4px 20px rgba(232, 67, 147, 0.3), 0 2px 8px rgba(232, 67, 147, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .add-node-btn:hover {
   transform: scale(1.08);
-  background: var(--color-accent-hover);
-  box-shadow: 0 6px 24px rgba(255, 109, 90, 0.45);
+  box-shadow: 0 6px 28px rgba(232, 67, 147, 0.4), 0 3px 12px rgba(232, 67, 147, 0.2);
 }
 
 .add-node-btn:active {

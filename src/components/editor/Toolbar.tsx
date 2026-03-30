@@ -1,8 +1,3 @@
-/**
- * Toolbar — n8n style minimal top bar.
- * Left: back + workflow name
- * Right: execution controls + save/load
- */
 import {
   Play,
   Square,
@@ -39,80 +34,60 @@ export function Toolbar({ onSave, onLoad, onOpenSettings }: Props) {
         borderBottom: "1px solid var(--color-border)",
       }}
     >
-      {/* Left: Logo + workflow name */}
+      {/* Left: Logo + name */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* Logo */}
         <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, #ff6d5a, #ff3b8d)" }}
+          style={{ background: "linear-gradient(135deg, #e84393, #fd79a8)" }}
         >
           <span className="text-white text-[11px] font-black">P</span>
         </div>
-
-        {/* Separator */}
-        <div className="w-px h-5 bg-white/8" />
-
-        {/* Workflow name */}
+        <div className="w-px h-5" style={{ background: "var(--color-border)" }} />
         <input
           value={workflowName}
           onChange={(e) => setWorkflowName(e.target.value)}
-          className="bg-transparent text-[15px] font-medium text-white/80 outline-none
-                     placeholder:text-white/20 min-w-[80px] max-w-[280px] truncate
-                     hover:text-white focus:text-white transition-colors"
+          className="bg-transparent text-[15px] font-medium outline-none
+                     min-w-[80px] max-w-[280px] truncate transition-colors"
+          style={{
+            color: "var(--color-text)",
+          }}
           placeholder="Untitled Workflow"
         />
       </div>
 
-      {/* Right: Controls */}
+      {/* Right */}
       <div className="flex items-center gap-2">
-        {/* Loop toggle */}
         <button
           onClick={() => updateSettings({ run_mode: isLoop ? "once" : "loop" })}
           className={clsx(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all",
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all border",
             isLoop
-              ? "bg-purple-500/15 text-purple-400 border border-purple-500/25"
-              : "text-white/30 hover:text-white/50 hover:bg-white/[0.04]"
+              ? "border-purple-300 bg-purple-50 text-purple-600"
+              : "border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-50"
           )}
         >
           <Repeat size={13} />
           <span>{isLoop ? "Loop" : "Once"}</span>
         </button>
 
-        {/* Loop counter */}
         {isRunning && isLoop && loopIteration > 0 && (
-          <span className="text-purple-400/60 text-[11px] tabular-nums">
+          <span className="text-purple-500 text-[11px] tabular-nums font-medium">
             #{loopIteration}
           </span>
         )}
 
-        {/* Separator */}
-        <div className="w-px h-5 bg-white/8" />
+        <div className="w-px h-5" style={{ background: "var(--color-border)" }} />
 
-        {/* Save / Load */}
-        <IconBtn onClick={onSave} title="Save">
-          <Save size={15} />
-        </IconBtn>
-        <IconBtn onClick={onLoad} title="Open">
-          <FolderOpen size={15} />
-        </IconBtn>
-        <IconBtn onClick={onOpenSettings} title="Settings">
-          <Settings size={15} />
-        </IconBtn>
+        <IconBtn onClick={onSave} title="Save"><Save size={15} /></IconBtn>
+        <IconBtn onClick={onLoad} title="Open"><FolderOpen size={15} /></IconBtn>
+        <IconBtn onClick={onOpenSettings} title="Settings"><Settings size={15} /></IconBtn>
 
-        {/* Separator */}
-        <div className="w-px h-5 bg-white/8" />
+        <div className="w-px h-5" style={{ background: "var(--color-border)" }} />
 
-        {/* Run / Stop */}
         {isRunning ? (
           <button
             onClick={stop}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium
-                       transition-all"
-            style={{
-              background: "rgba(255,59,92,0.12)",
-              color: "#ff3b5c",
-              border: "1px solid rgba(255,59,92,0.2)",
-            }}
+                       transition-all bg-red-50 text-red-500 border border-red-200 hover:bg-red-100"
           >
             <Square size={13} />
             <span>Stop</span>
@@ -120,12 +95,11 @@ export function Toolbar({ onSave, onLoad, onOpenSettings }: Props) {
         ) : (
           <button
             onClick={run}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium
-                       transition-all hover:brightness-110"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold
+                       transition-all text-white hover:brightness-105"
             style={{
-              background: "var(--color-accent)",
-              color: "white",
-              boxShadow: "0 2px 12px rgba(255,109,90,0.3)",
+              background: "linear-gradient(135deg, #e84393, #fd79a8)",
+              boxShadow: "0 2px 12px rgba(232, 67, 147, 0.25)",
             }}
           >
             <Play size={13} />
@@ -138,20 +112,14 @@ export function Toolbar({ onSave, onLoad, onOpenSettings }: Props) {
 }
 
 function IconBtn({
-  onClick,
-  title,
-  children,
-}: {
-  onClick: () => void;
-  title: string;
-  children: React.ReactNode;
-}) {
+  onClick, title, children,
+}: { onClick: () => void; title: string; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className="p-2 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.04]
-                 transition-colors"
+      className="p-2 rounded-lg transition-colors hover:bg-pink-50"
+      style={{ color: "var(--color-text-muted)" }}
     >
       {children}
     </button>

@@ -35,7 +35,6 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
   const catStyle = getCategoryStyle(category);
   const iconName = getNodeIcon(d.nodeType, category);
 
-  // Image preview
   const rawPreview = d.lastOutputs["_preview_image"] ?? d.lastOutputs["_display_image"];
   const imagePreview = typeof rawPreview === "string" ? rawPreview : null;
   const displayText = d.lastOutputs["_display"];
@@ -49,18 +48,18 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
       errorMsg={d.errorMsg}
       selected={selected}
     >
-      {/* Image preview */}
       {imagePreview !== null ? (
         <img
           src={imagePreview}
           alt="preview"
-          className="w-full rounded object-contain max-h-28"
+          className="w-full rounded-lg object-contain max-h-28 border"
+          style={{ borderColor: "var(--color-border-light)" }}
         />
       ) : null}
 
-      {/* Text display */}
       {displayText != null ? (
-        <div className="text-[10px] text-white/40 max-h-14 overflow-auto break-words whitespace-pre-wrap bg-white/[0.03] rounded px-2 py-1">
+        <div className="text-[10px] max-h-14 overflow-auto break-words whitespace-pre-wrap rounded-lg px-2 py-1"
+          style={{ color: "var(--color-text-secondary)", background: "var(--color-accent-light)" }}>
           {String(displayText)}
         </div>
       ) : null}
@@ -75,11 +74,12 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
           style={{
             top: handleOffset(i, inputs.length),
             background: getPortColor(p.type),
-            width: 9,
-            height: 9,
-            border: "2px solid var(--color-node-bg)",
+            width: 10,
+            height: 10,
+            border: "2.5px solid white",
             borderRadius: "50%",
-            left: -5,
+            left: -5.5,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
           }}
         />
       ))}
@@ -94,11 +94,12 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
           style={{
             top: handleOffset(i, outputs.length),
             background: getPortColor(p.type),
-            width: 9,
-            height: 9,
-            border: "2px solid var(--color-node-bg)",
+            width: 10,
+            height: 10,
+            border: "2.5px solid white",
             borderRadius: "50%",
-            right: -5,
+            right: -5.5,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
           }}
         />
       ))}

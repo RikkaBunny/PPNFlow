@@ -1,59 +1,57 @@
 /**
  * Node category and type visual mappings.
- * Matches n8n's icon-centric design.
+ * White + pink theme — softer, lighter icon backgrounds.
  */
 
 export interface CategoryStyle {
   color: string;
   bg: string;
-  icon: string;  // Lucide icon name
+  icon: string;
 }
 
-/** Category → visual style */
 const CATEGORY_STYLES: Record<string, CategoryStyle> = {
   Input: {
-    color: "#ff6d5a",
-    bg: "rgba(255,109,90,0.15)",
+    color: "#e84393",
+    bg: "rgba(232,67,147,0.1)",
     icon: "Download",
   },
   Output: {
-    color: "#af6bef",
-    bg: "rgba(175,107,239,0.15)",
+    color: "#8e44ad",
+    bg: "rgba(142,68,173,0.1)",
     icon: "Upload",
   },
   AI: {
-    color: "#ff6dd3",
-    bg: "rgba(255,109,211,0.15)",
+    color: "#e84393",
+    bg: "rgba(232,67,147,0.1)",
     icon: "Sparkles",
   },
   Automation: {
-    color: "#1fa8f2",
-    bg: "rgba(31,168,242,0.15)",
+    color: "#2980b9",
+    bg: "rgba(41,128,185,0.1)",
     icon: "MousePointer2",
   },
   Logic: {
-    color: "#e8b520",
-    bg: "rgba(232,181,32,0.15)",
+    color: "#e67e22",
+    bg: "rgba(230,126,34,0.1)",
     icon: "GitBranch",
   },
   Transform: {
-    color: "#1ac4b5",
-    bg: "rgba(26,196,181,0.15)",
+    color: "#16a085",
+    bg: "rgba(22,160,133,0.1)",
     icon: "ArrowRightLeft",
   },
   Display: {
-    color: "#4cd964",
-    bg: "rgba(76,217,100,0.15)",
+    color: "#27ae60",
+    bg: "rgba(39,174,96,0.1)",
     icon: "Eye",
   },
   Other: {
-    color: "#8b95a5",
-    bg: "rgba(139,149,165,0.15)",
+    color: "#7f8c8d",
+    bg: "rgba(127,140,141,0.1)",
     icon: "Box",
   },
 };
 
-/** Node type → specific icon override */
 const NODE_TYPE_ICONS: Record<string, string> = {
   screenshot: "Camera",
   ai_chat: "Sparkles",
@@ -79,15 +77,14 @@ export function getNodeIcon(nodeType: string, category?: string): string {
   return NODE_TYPE_ICONS[nodeType] ?? getCategoryStyle(category).icon;
 }
 
-/** Port type → handle color */
 export const PORT_COLORS: Record<string, string> = {
-  STRING: "#a3e635",
-  IMAGE: "#fb923c",
-  INT: "#60a5fa",
-  FLOAT: "#818cf8",
-  BOOL: "#f472b6",
-  JSON: "#facc15",
-  ANY: "#94a3b8",
+  STRING: "#27ae60",
+  IMAGE: "#e67e22",
+  INT: "#2980b9",
+  FLOAT: "#8e44ad",
+  BOOL: "#e84393",
+  JSON: "#f39c12",
+  ANY: "#95a5a6",
 };
 
 export function getPortColor(type: string): string {

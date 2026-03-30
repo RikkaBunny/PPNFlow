@@ -37,10 +37,10 @@ export function NodeShell({
         isDone && "ppn-node--done"
       )}
     >
-      {/* Status badge (n8n style: top-right corner) */}
+      {/* Status badge */}
       {isRunning && (
         <div className="ppn-status-badge animate-pulse-ring" style={{ background: "var(--color-running)" }}>
-          <Loader2 size={11} className="text-white animate-spin" style={{ animation: "spin 1s linear infinite" }} />
+          <Loader2 size={11} className="text-white" style={{ animation: "spin 1s linear infinite" }} />
         </div>
       )}
       {isDone && (
@@ -54,39 +54,38 @@ export function NodeShell({
         </div>
       )}
 
-      {/* Header: Icon + Title (n8n style) */}
+      {/* Header: Icon + Title */}
       <div className="flex items-center gap-0">
-        {/* Icon area */}
         <div
-          className="flex items-center justify-center flex-shrink-0 rounded-l-[9px]"
+          className="flex items-center justify-center flex-shrink-0 rounded-l-[11px]"
           style={{
             background: iconBg,
-            width: 42,
-            height: 42,
+            width: 44,
+            height: 44,
           }}
         >
           {icon}
         </div>
-
-        {/* Title */}
         <div className="flex-1 min-w-0 px-3 py-2.5">
-          <span className="text-[13px] font-medium text-white/90 truncate block leading-tight">
+          <span className="text-[13px] font-semibold truncate block leading-tight"
+            style={{ color: "var(--color-text)" }}>
             {label}
           </span>
         </div>
       </div>
 
-      {/* Body (only shown if there's content) */}
+      {/* Body */}
       {children && (
-        <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 border-t border-white/5">
+        <div className="px-3 pb-2.5 pt-0.5 space-y-1.5"
+          style={{ borderTop: "1px solid var(--color-border-light)" }}>
           {children}
         </div>
       )}
 
-      {/* Error tooltip */}
+      {/* Error */}
       {isError && errorMsg && (
-        <div className="px-3 pb-2 border-t border-red-500/20">
-          <p className="text-[10px] text-red-400/80 leading-relaxed mt-1.5 break-words">
+        <div className="px-3 pb-2" style={{ borderTop: "1px solid rgba(231,76,60,0.15)" }}>
+          <p className="text-[10px] leading-relaxed mt-1.5 break-words" style={{ color: "var(--color-error)" }}>
             {errorMsg}
           </p>
         </div>

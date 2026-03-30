@@ -174,7 +174,7 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
             };
             return colors[status ?? ""] ?? "#363655";
           }}
-          maskColor="rgba(27,27,47,0.85)"
+          maskColor="rgba(248,245,247,0.85)"
           style={{
             background: "var(--color-panel)",
             border: "1px solid var(--color-border)",

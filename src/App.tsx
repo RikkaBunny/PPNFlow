@@ -156,32 +156,34 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         style={{
           background: "var(--color-panel)",
           border: "1px solid var(--color-border)",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.1)",
         }}
       >
-        <h2 className="text-[16px] font-semibold text-white/90 mb-5">Settings</h2>
+        <h2 className="text-[16px] font-semibold mb-5" style={{ color: "var(--color-text)" }}>Settings</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-[11px] font-medium text-white/40 mb-2 uppercase tracking-wide">
+            <label className="block text-[11px] font-semibold mb-2 uppercase tracking-wide"
+              style={{ color: "var(--color-text-muted)" }}>
               Workflow Name
             </label>
             <input
-              className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2.5 text-[13px] text-white/80
-                         outline-none focus:border-white/20 transition-colors"
+              className="w-full rounded-xl px-3 py-2.5 text-[13px] outline-none transition-colors border"
+              style={{ color: "var(--color-text)", background: "var(--color-canvas)", borderColor: "var(--color-border)" }}
               value={store.workflowName}
               onChange={(e) => store.setWorkflowName(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-white/40 mb-2 uppercase tracking-wide">
+            <label className="block text-[11px] font-semibold mb-2 uppercase tracking-wide"
+              style={{ color: "var(--color-text-muted)" }}>
               Loop Delay (ms)
             </label>
             <input
               type="number"
-              className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2.5 text-[13px] text-white/80
-                         outline-none focus:border-white/20 transition-colors tabular-nums"
+              className="w-full rounded-xl px-3 py-2.5 text-[13px] outline-none transition-colors border tabular-nums"
+              style={{ color: "var(--color-text)", background: "var(--color-canvas)", borderColor: "var(--color-border)" }}
               value={store.settings.loop_delay_ms}
               min={0}
               onChange={(e) =>
@@ -192,17 +194,17 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          <p className="text-[11px] text-white/15 leading-relaxed">
+          <p className="text-[11px] leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
             API keys are configured per-node in the node settings panel.
           </p>
         </div>
 
         <button
           onClick={onClose}
-          className="w-full mt-5 py-2.5 rounded-lg text-[13px] font-medium transition-all hover:brightness-110"
+          className="w-full mt-5 py-2.5 rounded-xl text-[13px] font-semibold transition-all text-white hover:brightness-105"
           style={{
-            background: "var(--color-accent)",
-            color: "white",
+            background: "linear-gradient(135deg, #e84393, #fd79a8)",
+            boxShadow: "0 2px 12px rgba(232,67,147,0.25)",
           }}
         >
           Done
