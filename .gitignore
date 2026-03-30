@@ -1,0 +1,29 @@
+# Node
+node_modules/
+dist/
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+engine/__pycache__/
+engine/nodes/__pycache__/
+engine/providers/__pycache__/
+.venv/
+venv/
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files from screenshot node
+*.tmp
