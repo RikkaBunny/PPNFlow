@@ -2,33 +2,36 @@ import { useState, useCallback } from "react";
 import type { Node } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
 
-import { FlowEditor, createFlowNode } from "@/components/editor/FlowEditor";
-import { NodePalette }   from "@/components/editor/NodePalette";
+import { FlowEditor } from "@/components/editor/FlowEditor";
+import { NodePalette } from "@/components/editor/NodePalette";
 import { PropertiesPanel } from "@/components/editor/PropertiesPanel";
-import { Toolbar }       from "@/components/editor/Toolbar";
+import { Toolbar } from "@/components/editor/Toolbar";
+import { ExecutionLog } from "@/components/editor/ExecutionLog";
+import { createFlowNode } from "@/components/editor/createFlowNode";
 
-import { useEngine }     from "@/hooks/useEngine";
-import { useFlowStore }  from "@/stores/flowStore";
+import { useEngine } from "@/hooks/useEngine";
+import { useFlowStore } from "@/stores/flowStore";
 import type { FlowNodeData, NodeManifest } from "@/types/node";
 import { serializeGraph, deserializeGraph } from "@/lib/graphSerializer";
 import type { WorkflowFile } from "@/types/workflow";
 
 function AppInner() {
-  useEngine();  // Start Python engine + subscribe to events
+  useEngine();
 
   const [selectedNode, setSelectedNode] = useState<Node<FlowNodeData> | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
-  const addNode    = useFlowStore((s) => s.addNode);
-  const nodes      = useFlowStore((s) => s.nodes);
-  const edges      = useFlowStore((s) => s.edges);
-  const settings   = useFlowStore((s) => s.settings);
-  const name       = useFlowStore((s) => s.workflowName);
-  const setNodes   = useFlowStore((s) => s.setNodes);
-  const setEdges   = useFlowStore((s) => s.setEdges);
-  const setName    = useFlowStore((s) => s.setWorkflowName);
+  const addNode = useFlowStore((s) => s.addNode);
+  const nodes = useFlowStore((s) => s.nodes);
+  const edges = useFlowStore((s) => s.edges);
+  const settings = useFlowStore((s) => s.settings);
+  const name = useFlowStore((s) => s.workflowName);
+  const setNodes = useFlowStore((s) => s.setNodes);
+  const setEdges = useFlowStore((s) => s.setEdges);
+  const setName = useFlowStore((s) => s.setWorkflowName);
 
-  // Add a node from the palette at a reasonable canvas position
   const handleAddNode = useCallback(
     (manifest: NodeManifest) => {
       const node = createFlowNode(manifest, {
@@ -40,22 +43,31 @@ function AppInner() {
     [addNode]
   );
 
-  // Save workflow as JSON file download
+  const handleDeleteNode = useCallback(
+    (id: string) => {
+      setNodes(nodes.filter((n) => n.id !== id));
+      setEdges(edges.filter((e) => e.source !== id && e.target !== id));
+      setSelectedNode(null);
+    },
+    [nodes, edges, setNodes, setEdges]
+  );
+
   const handleSave = useCallback(() => {
     const workflow = serializeGraph(nodes, edges, settings, name);
-    const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: "application/json" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
+    const blob = new Blob([JSON.stringify(workflow, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
     a.download = `${name}.ppnflow`;
     a.click();
     URL.revokeObjectURL(url);
   }, [nodes, edges, settings, name]);
 
-  // Load workflow from file
   const handleLoad = useCallback(() => {
     const input = document.createElement("input");
-    input.type   = "file";
+    input.type = "file";
     input.accept = ".ppnflow,.json";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
@@ -63,7 +75,9 @@ function AppInner() {
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
-          const workflow = JSON.parse(ev.target?.result as string) as WorkflowFile;
+          const workflow = JSON.parse(
+            ev.target?.result as string
+          ) as WorkflowFile;
           const { nodes: n, edges: ed } = deserializeGraph(workflow);
           setNodes(n);
           setEdges(ed);
@@ -79,42 +93,57 @@ function AppInner() {
   }, [setNodes, setEdges, setName]);
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-white">
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#0f0f14" }}>
       {/* Top toolbar */}
       <Toolbar
         onSave={handleSave}
         onLoad={handleLoad}
         onOpenSettings={() => setSettingsOpen(true)}
+        leftPanelOpen={leftPanelOpen}
+        rightPanelOpen={rightPanelOpen}
+        onToggleLeftPanel={() => setLeftPanelOpen(!leftPanelOpen)}
+        onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
       />
 
-      {/* Main layout */}
+      {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Node palette */}
-        <div className="w-44 flex-shrink-0 bg-slate-900 border-r border-slate-700 overflow-hidden flex flex-col">
-          <div className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-700">
-            Nodes
+        {leftPanelOpen && (
+          <div
+            className="w-52 flex-shrink-0 flex flex-col overflow-hidden border-r animate-slide-in-left"
+            style={{ background: "#16161e", borderColor: "#2a2a3a" }}
+          >
+            <NodePalette onAddNode={handleAddNode} />
           </div>
-          <NodePalette onAddNode={handleAddNode} />
-        </div>
+        )}
 
-        {/* Center: Flow canvas */}
-        <div className="flex-1 overflow-hidden">
-          <FlowEditor
-            selectedNode={selectedNode}
-            onSelectNode={setSelectedNode}
-          />
+        {/* Center: Flow canvas + bottom log */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-hidden">
+            <FlowEditor
+              selectedNode={selectedNode}
+              onSelectNode={setSelectedNode}
+            />
+          </div>
+          <ExecutionLog />
         </div>
 
         {/* Right: Properties panel */}
-        <div className="w-56 flex-shrink-0 bg-slate-900 border-l border-slate-700 overflow-hidden flex flex-col">
-          <div className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-700">
-            Properties
+        {rightPanelOpen && (
+          <div
+            className="w-64 flex-shrink-0 flex flex-col overflow-hidden border-l animate-slide-in-right"
+            style={{ background: "#16161e", borderColor: "#2a2a3a" }}
+          >
+            <PropertiesPanel
+              node={selectedNode}
+              onClose={() => setSelectedNode(null)}
+              onDeleteNode={handleDeleteNode}
+            />
           </div>
-          <PropertiesPanel node={selectedNode} />
-        </div>
+        )}
       </div>
 
-      {/* Settings modal (basic) */}
+      {/* Settings modal */}
       {settingsOpen && (
         <SettingsModal onClose={() => setSettingsOpen(false)} />
       )}
@@ -124,37 +153,62 @@ function AppInner() {
 
 function SettingsModal({ onClose }: { onClose: () => void }) {
   const store = useFlowStore();
+
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-xl p-6 w-96 border border-slate-600">
-        <h2 className="text-white font-bold mb-4">Settings</h2>
-        <p className="text-slate-400 text-sm mb-4">
-          API keys are stored locally in the Properties panel of each AI Chat node.
-        </p>
-        <div className="mb-4">
-          <label className="block text-xs text-slate-400 mb-1">Workflow Name</label>
-          <input
-            className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-            value={store.workflowName}
-            onChange={(e) => store.setWorkflowName(e.target.value)}
-          />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+      <div
+        className="rounded-2xl p-6 w-[420px] shadow-2xl border"
+        style={{ background: "#1e1e2a", borderColor: "#363648" }}
+      >
+        <h2 className="text-white/90 font-bold text-base mb-5">Settings</h2>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-medium text-white/40 mb-1.5">
+              Workflow Name
+            </label>
+            <input
+              className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2 text-sm text-white/80
+                         outline-none focus:border-accent/50 transition-colors"
+              value={store.workflowName}
+              onChange={(e) => store.setWorkflowName(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium text-white/40 mb-1.5">
+              Loop Delay (ms)
+            </label>
+            <input
+              type="number"
+              className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2 text-sm text-white/80
+                         outline-none focus:border-accent/50 transition-colors tabular-nums"
+              value={store.settings.loop_delay_ms}
+              min={0}
+              onChange={(e) =>
+                store.updateSettings({
+                  loop_delay_ms: parseInt(e.target.value, 10) || 0,
+                })
+              }
+            />
+          </div>
+
+          <p className="text-[11px] text-white/20 leading-relaxed">
+            API keys are configured per-node in the Properties panel.
+          </p>
         </div>
-        <div className="mb-4">
-          <label className="block text-xs text-slate-400 mb-1">Loop Delay (ms)</label>
-          <input
-            type="number"
-            className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm text-white"
-            value={store.settings.loop_delay_ms}
-            min={0}
-            onChange={(e) => store.updateSettings({ loop_delay_ms: parseInt(e.target.value, 10) || 0 })}
-          />
+
+        <div className="mt-6 flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg text-sm font-medium
+                       bg-accent/20 text-accent hover:bg-accent/30
+                       border border-accent/30
+                       transition-colors"
+          >
+            Done
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded py-2 text-sm"
-        >
-          Close
-        </button>
       </div>
     </div>
   );

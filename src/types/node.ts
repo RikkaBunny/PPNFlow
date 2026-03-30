@@ -30,7 +30,7 @@ export interface NodeManifest {
 }
 
 // Data stored on each React Flow node
-export interface FlowNodeData {
+export type FlowNodeData = Record<string, unknown> & {
   nodeType: string;
   label: string;
   config: Record<string, unknown>;
@@ -38,4 +38,4 @@ export interface FlowNodeData {
   status?: "idle" | "running" | "done" | "error" | "cached";
   errorMsg?: string;
   lastOutputs?: Record<string, unknown>;  // port → value/preview
-}
+};
