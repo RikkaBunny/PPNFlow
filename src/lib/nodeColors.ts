@@ -1,77 +1,82 @@
 /**
- * Category → visual mapping for nodes.
- * Each category gets a unique accent color and Lucide icon name.
+ * Node category and type visual mappings.
+ * Matches n8n's icon-centric design.
  */
 
 export interface CategoryStyle {
-  color: string;      // Tailwind-compatible hex
-  bgLight: string;    // Light background for node header
-  bgDark: string;     // Dark background for node body
-  border: string;     // Border color
-  icon: string;       // Lucide icon name
+  color: string;
+  bg: string;
+  icon: string;  // Lucide icon name
 }
 
+/** Category → visual style */
 const CATEGORY_STYLES: Record<string, CategoryStyle> = {
   Input: {
-    color: "#f97316",
-    bgLight: "rgba(249,115,22,0.15)",
-    bgDark: "rgba(249,115,22,0.06)",
-    border: "rgba(249,115,22,0.4)",
+    color: "#ff6d5a",
+    bg: "rgba(255,109,90,0.15)",
     icon: "Download",
   },
   Output: {
-    color: "#8b5cf6",
-    bgLight: "rgba(139,92,246,0.15)",
-    bgDark: "rgba(139,92,246,0.06)",
-    border: "rgba(139,92,246,0.4)",
+    color: "#af6bef",
+    bg: "rgba(175,107,239,0.15)",
     icon: "Upload",
   },
   AI: {
-    color: "#ec4899",
-    bgLight: "rgba(236,72,153,0.15)",
-    bgDark: "rgba(236,72,153,0.06)",
-    border: "rgba(236,72,153,0.4)",
-    icon: "Brain",
+    color: "#ff6dd3",
+    bg: "rgba(255,109,211,0.15)",
+    icon: "Sparkles",
   },
   Automation: {
-    color: "#3b82f6",
-    bgLight: "rgba(59,130,246,0.15)",
-    bgDark: "rgba(59,130,246,0.06)",
-    border: "rgba(59,130,246,0.4)",
-    icon: "Zap",
+    color: "#1fa8f2",
+    bg: "rgba(31,168,242,0.15)",
+    icon: "MousePointer2",
   },
   Logic: {
-    color: "#eab308",
-    bgLight: "rgba(234,179,8,0.15)",
-    bgDark: "rgba(234,179,8,0.06)",
-    border: "rgba(234,179,8,0.4)",
+    color: "#e8b520",
+    bg: "rgba(232,181,32,0.15)",
     icon: "GitBranch",
   },
   Transform: {
-    color: "#06b6d4",
-    bgLight: "rgba(6,182,212,0.15)",
-    bgDark: "rgba(6,182,212,0.06)",
-    border: "rgba(6,182,212,0.4)",
-    icon: "Shuffle",
+    color: "#1ac4b5",
+    bg: "rgba(26,196,181,0.15)",
+    icon: "ArrowRightLeft",
   },
   Display: {
-    color: "#22c55e",
-    bgLight: "rgba(34,197,94,0.15)",
-    bgDark: "rgba(34,197,94,0.06)",
-    border: "rgba(34,197,94,0.4)",
-    icon: "Monitor",
+    color: "#4cd964",
+    bg: "rgba(76,217,100,0.15)",
+    icon: "Eye",
   },
   Other: {
-    color: "#94a3b8",
-    bgLight: "rgba(148,163,184,0.15)",
-    bgDark: "rgba(148,163,184,0.06)",
-    border: "rgba(148,163,184,0.4)",
+    color: "#8b95a5",
+    bg: "rgba(139,149,165,0.15)",
     icon: "Box",
   },
 };
 
+/** Node type → specific icon override */
+const NODE_TYPE_ICONS: Record<string, string> = {
+  screenshot: "Camera",
+  ai_chat: "Sparkles",
+  mouse_click: "MousePointer2",
+  mouse_move: "Move",
+  keyboard_type: "Keyboard",
+  keyboard_press: "Keyboard",
+  text_input: "Type",
+  text_display: "FileText",
+  image_display: "Image",
+  json_parse: "Braces",
+  extract_field: "Search",
+  condition: "GitBranch",
+  delay: "Clock",
+  template: "FileCode",
+};
+
 export function getCategoryStyle(category?: string): CategoryStyle {
   return CATEGORY_STYLES[category ?? "Other"] ?? CATEGORY_STYLES.Other;
+}
+
+export function getNodeIcon(nodeType: string, category?: string): string {
+  return NODE_TYPE_ICONS[nodeType] ?? getCategoryStyle(category).icon;
 }
 
 /** Port type → handle color */

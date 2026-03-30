@@ -1,49 +1,43 @@
+/**
+ * Node palette — n8n style overlay panel.
+ * Triggered by the floating "+" button on the canvas.
+ * Slides in from left, can be closed by clicking backdrop or X.
+ */
 import { useState, useCallback } from "react";
-import {
-  Search,
-  ChevronRight,
-  Brain,
-  Zap,
-  Download,
-  Upload,
-  GitBranch,
-  Shuffle,
-  Monitor,
-  Box,
-  type LucideProps,
-} from "lucide-react";
-import clsx from "clsx";
+import { Search, X } from "lucide-react";
 import { useManifestStore } from "@/stores/manifestStore";
-import { getCategoryStyle } from "@/lib/nodeColors";
+import { getCategoryStyle, getNodeIcon } from "@/lib/nodeColors";
+import { NodeIcon } from "@/components/nodes/NodeIcon";
 import type { NodeManifest } from "@/types/node";
 
-/** Map category icon name → Lucide component */
-const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
-  Brain,
-  Zap,
-  Download,
-  Upload,
-  GitBranch,
-  Shuffle,
-  Monitor,
-  Box,
-};
-
 interface Props {
+  open: boolean;
+  onClose: () => void;
   onAddNode: (manifest: NodeManifest) => void;
 }
 
-export function NodePalette({ onAddNode }: Props) {
+export function NodePalette({ open, onClose, onAddNode }: Props) {
   const manifests = useManifestStore((s) => s.manifests);
   const categories = useManifestStore((s) => s.categories);
-  const loaded = useManifestStore((s) => s.loaded);
-
   const [search, setSearch] = useState("");
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  const toggleCategory = useCallback((cat: string) => {
-    setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
-  }, []);
+  const handleAdd = useCallback(
+    (m: NodeManifest) => {
+      onAddNode(m);
+      onClose();
+    },
+    [onAddNode, onClose]
+  );
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent, manifest: NodeManifest) => {
+      e.dataTransfer.setData("application/ppnflow-node", manifest.type);
+      e.dataTransfer.effectAllowed = "move";
+    },
+    []
+  );
+
+  if (!open) return null;
 
   const filtered = search.trim()
     ? manifests.filter(
@@ -57,122 +51,126 @@ export function NodePalette({ onAddNode }: Props) {
     ? [...new Set(filtered.map((m) => m.category))].sort()
     : categories;
 
-  // Drag start handler — encode manifest type in dataTransfer
-  const handleDragStart = useCallback(
-    (e: React.DragEvent, manifest: NodeManifest) => {
-      e.dataTransfer.setData("application/ppnflow-node", manifest.type);
-      e.dataTransfer.effectAllowed = "move";
-    },
-    []
-  );
-
-  if (!loaded) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center space-y-2 animate-fade-in">
-          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-2xs text-white/30">Starting engine...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (manifests.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center px-4">
-        <p className="text-2xs text-white/30 text-center">
-          No nodes available. Check the Python engine.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col h-full">
-      {/* Search bar */}
-      <div className="px-3 py-2.5">
-        <div className="relative">
-          <Search
-            size={13}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/20"
-          />
-          <input
-            type="text"
-            placeholder="Search nodes..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white/5 border border-white/8 rounded-lg pl-8 pr-3 py-1.5
-                       text-xs text-white/80 placeholder:text-white/20
-                       outline-none focus:border-accent/50 focus:bg-white/8
-                       transition-colors"
-          />
+    <>
+      {/* Backdrop */}
+      <div className="overlay-backdrop" onClick={onClose} />
+
+      {/* Panel */}
+      <div
+        className="fixed left-0 top-0 bottom-0 z-50 flex flex-col animate-slide-in-left"
+        style={{
+          width: 320,
+          background: "var(--color-panel)",
+          borderRight: "1px solid var(--color-border)",
+          boxShadow: "8px 0 32px rgba(0,0,0,0.4)",
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: "1px solid var(--color-border)" }}
+        >
+          <h2 className="text-[15px] font-semibold text-white/90">Add Node</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-3">
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20"
+            />
+            <input
+              type="text"
+              placeholder="Search nodes..."
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-lg pl-9 pr-3 py-2.5
+                         text-[13px] text-white/80 placeholder:text-white/20
+                         outline-none transition-colors
+                         bg-white/[0.04] border border-white/8
+                         focus:border-white/20 focus:bg-white/[0.06]"
+            />
+          </div>
+        </div>
+
+        {/* Node list */}
+        <div className="flex-1 overflow-y-auto px-3 pb-4">
+          {filteredCategories.map((cat) => {
+            const items = filtered.filter((m) => m.category === cat);
+            const catStyle = getCategoryStyle(cat);
+
+            return (
+              <div key={cat} className="mb-4">
+                {/* Category label */}
+                <div className="px-2 py-1.5 mb-1">
+                  <span
+                    className="text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: catStyle.color }}
+                  >
+                    {cat}
+                  </span>
+                </div>
+
+                {/* Node items */}
+                <div className="space-y-0.5">
+                  {items.map((m) => {
+                    const iconName = getNodeIcon(m.type, m.category);
+                    return (
+                      <button
+                        key={m.type}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, m)}
+                        onClick={() => handleAdd(m)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                                   text-left cursor-grab
+                                   hover:bg-white/[0.04] active:bg-white/[0.07]
+                                   transition-colors group"
+                      >
+                        {/* Icon */}
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: catStyle.bg }}
+                        >
+                          <NodeIcon
+                            name={iconName}
+                            size={15}
+                            color={catStyle.color}
+                          />
+                        </div>
+
+                        {/* Name + type */}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] text-white/80 group-hover:text-white/95 transition-colors truncate">
+                            {m.label}
+                          </div>
+                          <div className="text-[10px] text-white/20 truncate">
+                            {m.type}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {filtered.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-[13px] text-white/20">No nodes found</p>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Category list */}
-      <div className="flex-1 overflow-y-auto pb-4">
-        {filteredCategories.map((cat) => {
-          const style = getCategoryStyle(cat);
-          const Icon = ICON_MAP[style.icon] ?? Box;
-          const isCollapsed = collapsed[cat] && !search.trim();
-          const items = filtered.filter((m) => m.category === cat);
-
-          return (
-            <div key={cat} className="animate-fade-in">
-              {/* Category header */}
-              <button
-                onClick={() => toggleCategory(cat)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-left
-                           hover:bg-white/5 transition-colors group"
-              >
-                <ChevronRight
-                  size={12}
-                  className={clsx(
-                    "text-white/20 transition-transform duration-200",
-                    !isCollapsed && "rotate-90"
-                  )}
-                />
-                <Icon size={13} style={{ color: style.color }} />
-                <span
-                  className="text-[11px] font-semibold tracking-wide flex-1"
-                  style={{ color: style.color }}
-                >
-                  {cat}
-                </span>
-                <span className="text-[10px] text-white/15">
-                  {items.length}
-                </span>
-              </button>
-
-              {/* Node items */}
-              {!isCollapsed && (
-                <div className="pb-1">
-                  {items.map((m) => (
-                    <div
-                      key={m.type}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, m)}
-                      onClick={() => onAddNode(m)}
-                      className="group/item flex items-center gap-2 mx-2 px-2.5 py-1.5
-                                 rounded-lg cursor-grab
-                                 hover:bg-white/5 active:bg-white/8
-                                 transition-colors"
-                    >
-                      <div
-                        className="w-1 h-4 rounded-full flex-shrink-0 opacity-40 group-hover/item:opacity-80 transition-opacity"
-                        style={{ background: style.color }}
-                      />
-                      <span className="text-xs text-white/60 group-hover/item:text-white/90 transition-colors truncate">
-                        {m.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    </>
   );
 }

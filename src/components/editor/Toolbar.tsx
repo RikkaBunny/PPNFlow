@@ -1,3 +1,8 @@
+/**
+ * Toolbar — n8n style minimal top bar.
+ * Left: back + workflow name
+ * Right: execution controls + save/load
+ */
 import {
   Play,
   Square,
@@ -5,11 +10,6 @@ import {
   FolderOpen,
   Settings,
   Repeat,
-  PanelLeftOpen,
-  PanelLeftClose,
-  PanelRightOpen,
-  PanelRightClose,
-  ChevronDown,
 } from "lucide-react";
 import { useFlowStore } from "@/stores/flowStore";
 import { useExecution } from "@/hooks/useExecution";
@@ -20,21 +20,9 @@ interface Props {
   onSave: () => void;
   onLoad: () => void;
   onOpenSettings: () => void;
-  leftPanelOpen: boolean;
-  rightPanelOpen: boolean;
-  onToggleLeftPanel: () => void;
-  onToggleRightPanel: () => void;
 }
 
-export function Toolbar({
-  onSave,
-  onLoad,
-  onOpenSettings,
-  leftPanelOpen,
-  rightPanelOpen,
-  onToggleLeftPanel,
-  onToggleRightPanel,
-}: Props) {
+export function Toolbar({ onSave, onLoad, onOpenSettings }: Props) {
   const { run, stop, isRunning } = useExecution();
   const loopIteration = useExecutionStore((s) => s.loopIteration);
   const settings = useFlowStore((s) => s.settings);
@@ -45,83 +33,86 @@ export function Toolbar({
 
   return (
     <div
-      className="h-12 flex items-center px-3 gap-1 border-b select-none"
+      className="h-[52px] flex items-center px-4 gap-3 select-none"
       style={{
-        background: "#16161e",
-        borderColor: "#2a2a3a",
+        background: "var(--color-panel)",
+        borderBottom: "1px solid var(--color-border)",
       }}
     >
-      {/* Left section: Logo + panel toggles */}
-      <div className="flex items-center gap-2">
+      {/* Left: Logo + workflow name */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         {/* Logo */}
-        <div className="flex items-center gap-2 mr-1">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-            <span className="text-white text-[10px] font-black">P</span>
-          </div>
-          <span className="text-white/80 text-sm font-bold tracking-tight hidden sm:inline">
-            PPNFlow
-          </span>
-        </div>
-
-        <div className="w-px h-5 bg-white/8 mx-1" />
-
-        {/* Toggle panels */}
-        <ToolbarIconBtn
-          onClick={onToggleLeftPanel}
-          tooltip={leftPanelOpen ? "Hide nodes" : "Show nodes"}
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: "linear-gradient(135deg, #ff6d5a, #ff3b8d)" }}
         >
-          {leftPanelOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-        </ToolbarIconBtn>
-      </div>
-
-      {/* Center: Workflow name */}
-      <div className="flex-1 flex justify-center">
-        <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/8 transition-colors group">
-          <input
-            value={workflowName}
-            onChange={(e) => setWorkflowName(e.target.value)}
-            className="bg-transparent text-sm text-white/80 text-center outline-none
-                       placeholder:text-white/20 min-w-[80px] max-w-[200px]
-                       group-hover:text-white transition-colors"
-            placeholder="Untitled"
-          />
-          <ChevronDown size={12} className="text-white/20" />
+          <span className="text-white text-[11px] font-black">P</span>
         </div>
+
+        {/* Separator */}
+        <div className="w-px h-5 bg-white/8" />
+
+        {/* Workflow name */}
+        <input
+          value={workflowName}
+          onChange={(e) => setWorkflowName(e.target.value)}
+          className="bg-transparent text-[15px] font-medium text-white/80 outline-none
+                     placeholder:text-white/20 min-w-[80px] max-w-[280px] truncate
+                     hover:text-white focus:text-white transition-colors"
+          placeholder="Untitled Workflow"
+        />
       </div>
 
-      {/* Right section: Execution + File ops */}
-      <div className="flex items-center gap-1.5">
+      {/* Right: Controls */}
+      <div className="flex items-center gap-2">
         {/* Loop toggle */}
         <button
-          onClick={() =>
-            updateSettings({ run_mode: isLoop ? "once" : "loop" })
-          }
+          onClick={() => updateSettings({ run_mode: isLoop ? "once" : "loop" })}
           className={clsx(
-            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all",
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all",
             isLoop
-              ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-              : "text-white/40 hover:text-white/60 hover:bg-white/5"
+              ? "bg-purple-500/15 text-purple-400 border border-purple-500/25"
+              : "text-white/30 hover:text-white/50 hover:bg-white/[0.04]"
           )}
-          title="Toggle loop mode"
         >
-          <Repeat size={13} className={isLoop ? "text-purple-400" : ""} />
-          <span className="hidden sm:inline">{isLoop ? "Loop" : "Once"}</span>
+          <Repeat size={13} />
+          <span>{isLoop ? "Loop" : "Once"}</span>
         </button>
 
-        {/* Loop iteration counter */}
+        {/* Loop counter */}
         {isRunning && isLoop && loopIteration > 0 && (
-          <span className="text-purple-300/70 text-[11px] tabular-nums animate-fade-in">
+          <span className="text-purple-400/60 text-[11px] tabular-nums">
             #{loopIteration}
           </span>
         )}
+
+        {/* Separator */}
+        <div className="w-px h-5 bg-white/8" />
+
+        {/* Save / Load */}
+        <IconBtn onClick={onSave} title="Save">
+          <Save size={15} />
+        </IconBtn>
+        <IconBtn onClick={onLoad} title="Open">
+          <FolderOpen size={15} />
+        </IconBtn>
+        <IconBtn onClick={onOpenSettings} title="Settings">
+          <Settings size={15} />
+        </IconBtn>
+
+        {/* Separator */}
+        <div className="w-px h-5 bg-white/8" />
 
         {/* Run / Stop */}
         {isRunning ? (
           <button
             onClick={stop}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                       bg-red-500/20 text-red-300 border border-red-500/30
-                       hover:bg-red-500/30 transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium
+                       transition-all"
+            style={{
+              background: "rgba(255,59,92,0.12)",
+              color: "#ff3b5c",
+              border: "1px solid rgba(255,59,92,0.2)",
+            }}
           >
             <Square size={13} />
             <span>Stop</span>
@@ -129,60 +120,37 @@ export function Toolbar({
         ) : (
           <button
             onClick={run}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                       bg-emerald-500/20 text-emerald-300 border border-emerald-500/30
-                       hover:bg-emerald-500/30 transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium
+                       transition-all hover:brightness-110"
+            style={{
+              background: "var(--color-accent)",
+              color: "white",
+              boxShadow: "0 2px 12px rgba(255,109,90,0.3)",
+            }}
           >
             <Play size={13} />
-            <span>Run</span>
+            <span>Execute</span>
           </button>
         )}
-
-        <div className="w-px h-5 bg-white/8 mx-0.5" />
-
-        {/* File operations */}
-        <ToolbarIconBtn onClick={onSave} tooltip="Save workflow">
-          <Save size={15} />
-        </ToolbarIconBtn>
-        <ToolbarIconBtn onClick={onLoad} tooltip="Load workflow">
-          <FolderOpen size={15} />
-        </ToolbarIconBtn>
-
-        <div className="w-px h-5 bg-white/8 mx-0.5" />
-
-        <ToolbarIconBtn onClick={onOpenSettings} tooltip="Settings">
-          <Settings size={15} />
-        </ToolbarIconBtn>
-
-        <ToolbarIconBtn
-          onClick={onToggleRightPanel}
-          tooltip={rightPanelOpen ? "Hide properties" : "Show properties"}
-        >
-          {rightPanelOpen ? (
-            <PanelRightClose size={15} />
-          ) : (
-            <PanelRightOpen size={15} />
-          )}
-        </ToolbarIconBtn>
       </div>
     </div>
   );
 }
 
-function ToolbarIconBtn({
+function IconBtn({
   onClick,
-  tooltip,
+  title,
   children,
 }: {
   onClick: () => void;
-  tooltip: string;
+  title: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
-      title={tooltip}
-      className="p-1.5 rounded-lg text-white/35 hover:text-white/70 hover:bg-white/5
+      title={title}
+      className="p-2 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.04]
                  transition-colors"
     >
       {children}

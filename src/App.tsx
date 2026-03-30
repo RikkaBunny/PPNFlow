@@ -1,3 +1,7 @@
+/**
+ * PPNFlow App — n8n-inspired layout.
+ * Full-screen canvas with overlay panels for node palette and properties.
+ */
 import { useState, useCallback } from "react";
 import type { Node } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
@@ -19,9 +23,8 @@ function AppInner() {
   useEngine();
 
   const [selectedNode, setSelectedNode] = useState<Node<FlowNodeData> | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
 
   const addNode = useFlowStore((s) => s.addNode);
   const nodes = useFlowStore((s) => s.nodes);
@@ -34,9 +37,10 @@ function AppInner() {
 
   const handleAddNode = useCallback(
     (manifest: NodeManifest) => {
+      const existingCount = nodes.length;
       const node = createFlowNode(manifest, {
-        x: 200 + Math.random() * 200,
-        y: 200 + Math.random() * 200,
+        x: 200 + (existingCount % 4) * 280,
+        y: 150 + Math.floor(existingCount / 4) * 150 + (Math.random() * 30 - 15),
       });
       addNode(node);
     },
@@ -50,6 +54,15 @@ function AppInner() {
       setSelectedNode(null);
     },
     [nodes, edges, setNodes, setEdges]
+  );
+
+  const handleSelectNode = useCallback(
+    (node: Node<FlowNodeData> | null) => {
+      setSelectedNode(node);
+      // Close palette when selecting a node
+      if (node) setPaletteOpen(false);
+    },
+    []
   );
 
   const handleSave = useCallback(() => {
@@ -93,57 +106,38 @@ function AppInner() {
   }, [setNodes, setEdges, setName]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "#0f0f14" }}>
-      {/* Top toolbar */}
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--color-canvas)" }}>
+      {/* Toolbar */}
       <Toolbar
         onSave={handleSave}
         onLoad={handleLoad}
         onOpenSettings={() => setSettingsOpen(true)}
-        leftPanelOpen={leftPanelOpen}
-        rightPanelOpen={rightPanelOpen}
-        onToggleLeftPanel={() => setLeftPanelOpen(!leftPanelOpen)}
-        onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
       />
 
-      {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Node palette */}
-        {leftPanelOpen && (
-          <div
-            className="w-52 flex-shrink-0 flex flex-col overflow-hidden border-r animate-slide-in-left"
-            style={{ background: "#16161e", borderColor: "#2a2a3a" }}
-          >
-            <NodePalette onAddNode={handleAddNode} />
-          </div>
-        )}
-
-        {/* Center: Flow canvas + bottom log */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-hidden">
-            <FlowEditor
-              selectedNode={selectedNode}
-              onSelectNode={setSelectedNode}
-            />
-          </div>
-          <ExecutionLog />
-        </div>
-
-        {/* Right: Properties panel */}
-        {rightPanelOpen && (
-          <div
-            className="w-64 flex-shrink-0 flex flex-col overflow-hidden border-l animate-slide-in-right"
-            style={{ background: "#16161e", borderColor: "#2a2a3a" }}
-          >
-            <PropertiesPanel
-              node={selectedNode}
-              onClose={() => setSelectedNode(null)}
-              onDeleteNode={handleDeleteNode}
-            />
-          </div>
-        )}
+      {/* Canvas (full area) */}
+      <div className="flex-1 relative overflow-hidden">
+        <FlowEditor
+          onSelectNode={handleSelectNode}
+          onOpenPalette={() => setPaletteOpen(true)}
+        />
+        <ExecutionLog />
       </div>
 
-      {/* Settings modal */}
+      {/* Overlay: Node Palette */}
+      <NodePalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onAddNode={handleAddNode}
+      />
+
+      {/* Overlay: Properties Panel */}
+      <PropertiesPanel
+        node={selectedNode}
+        onClose={() => setSelectedNode(null)}
+        onDeleteNode={handleDeleteNode}
+      />
+
+      {/* Settings Modal */}
       {settingsOpen && (
         <SettingsModal onClose={() => setSettingsOpen(false)} />
       )}
@@ -155,34 +149,39 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   const store = useFlowStore();
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
+      <div className="overlay-backdrop" onClick={onClose} />
       <div
-        className="rounded-2xl p-6 w-[420px] shadow-2xl border"
-        style={{ background: "#1e1e2a", borderColor: "#363648" }}
+        className="relative z-10 rounded-2xl p-6 w-[400px] animate-scale-in"
+        style={{
+          background: "var(--color-panel)",
+          border: "1px solid var(--color-border)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+        }}
       >
-        <h2 className="text-white/90 font-bold text-base mb-5">Settings</h2>
+        <h2 className="text-[16px] font-semibold text-white/90 mb-5">Settings</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-[11px] font-medium text-white/40 mb-1.5">
+            <label className="block text-[11px] font-medium text-white/40 mb-2 uppercase tracking-wide">
               Workflow Name
             </label>
             <input
-              className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2 text-sm text-white/80
-                         outline-none focus:border-accent/50 transition-colors"
+              className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2.5 text-[13px] text-white/80
+                         outline-none focus:border-white/20 transition-colors"
               value={store.workflowName}
               onChange={(e) => store.setWorkflowName(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-white/40 mb-1.5">
+            <label className="block text-[11px] font-medium text-white/40 mb-2 uppercase tracking-wide">
               Loop Delay (ms)
             </label>
             <input
               type="number"
-              className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2 text-sm text-white/80
-                         outline-none focus:border-accent/50 transition-colors tabular-nums"
+              className="w-full bg-white/[0.03] border border-white/8 rounded-lg px-3 py-2.5 text-[13px] text-white/80
+                         outline-none focus:border-white/20 transition-colors tabular-nums"
               value={store.settings.loop_delay_ms}
               min={0}
               onChange={(e) =>
@@ -193,22 +192,21 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          <p className="text-[11px] text-white/20 leading-relaxed">
-            API keys are configured per-node in the Properties panel.
+          <p className="text-[11px] text-white/15 leading-relaxed">
+            API keys are configured per-node in the node settings panel.
           </p>
         </div>
 
-        <div className="mt-6 flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg text-sm font-medium
-                       bg-accent/20 text-accent hover:bg-accent/30
-                       border border-accent/30
-                       transition-colors"
-          >
-            Done
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="w-full mt-5 py-2.5 rounded-lg text-[13px] font-medium transition-all hover:brightness-110"
+          style={{
+            background: "var(--color-accent)",
+            color: "white",
+          }}
+        >
+          Done
+        </button>
       </div>
     </div>
   );

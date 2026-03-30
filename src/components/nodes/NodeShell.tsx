@@ -1,11 +1,12 @@
 import { type ReactNode } from "react";
 import clsx from "clsx";
+import { Check, X, Loader2 } from "lucide-react";
 import type { NodeStatus } from "@/types/execution";
-import { getCategoryStyle } from "@/lib/nodeColors";
 
 export interface NodeShellProps {
   label: string;
-  category?: string;
+  icon: ReactNode;
+  iconBg: string;
   status?: NodeStatus;
   errorMsg?: string;
   ms?: number;
@@ -15,15 +16,13 @@ export interface NodeShellProps {
 
 export function NodeShell({
   label,
-  category,
+  icon,
+  iconBg,
   status = "idle",
   errorMsg,
-  ms,
   selected,
   children,
 }: NodeShellProps) {
-  const style = getCategoryStyle(category);
-
   const isRunning = status === "running";
   const isDone = status === "done";
   const isError = status === "error";
@@ -31,88 +30,63 @@ export function NodeShell({
   return (
     <div
       className={clsx(
-        "rounded-xl min-w-[200px] max-w-[280px] text-xs select-none",
-        "transition-all duration-200",
-        isRunning && "node-running",
-        selected && "ring-2 ring-white/20 ring-offset-1 ring-offset-transparent"
+        "ppn-node",
+        selected && "ppn-node--selected",
+        isRunning && "ppn-node--running",
+        isError && "ppn-node--error",
+        isDone && "ppn-node--done"
       )}
-      style={{
-        background: "#1a1a26",
-        border: `1.5px solid ${
-          isRunning
-            ? "#3b82f6"
-            : isError
-            ? "#ef4444"
-            : isDone
-            ? "#22c55e60"
-            : selected
-            ? style.color + "80"
-            : "#2a2a3a"
-        }`,
-        boxShadow: isRunning
-          ? "0 0 20px -4px rgba(59,130,246,0.3)"
-          : isError
-          ? "0 0 20px -4px rgba(239,68,68,0.2)"
-          : "0 4px 24px -4px rgba(0,0,0,0.5)",
-      }}
     >
-      {/* Category accent stripe (top) */}
-      <div
-        className="h-[3px] rounded-t-xl"
-        style={{ background: style.color }}
-      />
+      {/* Status badge (n8n style: top-right corner) */}
+      {isRunning && (
+        <div className="ppn-status-badge animate-pulse-ring" style={{ background: "var(--color-running)" }}>
+          <Loader2 size={11} className="text-white animate-spin" style={{ animation: "spin 1s linear infinite" }} />
+        </div>
+      )}
+      {isDone && (
+        <div className="ppn-status-badge" style={{ background: "var(--color-success)" }}>
+          <Check size={11} className="text-white" strokeWidth={3} />
+        </div>
+      )}
+      {isError && (
+        <div className="ppn-status-badge" style={{ background: "var(--color-error)" }}>
+          <X size={11} className="text-white" strokeWidth={3} />
+        </div>
+      )}
 
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        {/* Status dot */}
+      {/* Header: Icon + Title (n8n style) */}
+      <div className="flex items-center gap-0">
+        {/* Icon area */}
         <div
-          className={clsx(
-            "w-2.5 h-2.5 rounded-full flex-shrink-0 transition-colors",
-            isRunning && "status-dot-running"
-          )}
+          className="flex items-center justify-center flex-shrink-0 rounded-l-[9px]"
           style={{
-            background: isRunning
-              ? "#3b82f6"
-              : isDone
-              ? "#22c55e"
-              : isError
-              ? "#ef4444"
-              : status === "cached"
-              ? "#6b7280"
-              : style.color + "80",
-            boxShadow: isRunning
-              ? "0 0 6px rgba(59,130,246,0.5)"
-              : isDone
-              ? "0 0 6px rgba(34,197,94,0.3)"
-              : "none",
+            background: iconBg,
+            width: 42,
+            height: 42,
           }}
-        />
+        >
+          {icon}
+        </div>
 
-        {/* Label */}
-        <span className="font-semibold text-[13px] text-white/90 truncate flex-1">
-          {label}
-        </span>
-
-        {/* Execution time badge */}
-        {ms !== undefined && isDone && (
-          <span className="text-[10px] text-white/40 tabular-nums">
-            {ms}ms
+        {/* Title */}
+        <div className="flex-1 min-w-0 px-3 py-2.5">
+          <span className="text-[13px] font-medium text-white/90 truncate block leading-tight">
+            {label}
           </span>
-        )}
+        </div>
       </div>
 
-      {/* Separator */}
-      <div className="mx-2" style={{ borderTop: "1px solid #2a2a3a" }} />
-
-      {/* Body */}
+      {/* Body (only shown if there's content) */}
       {children && (
-        <div className="px-3 py-2 space-y-1.5">{children}</div>
+        <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 border-t border-white/5">
+          {children}
+        </div>
       )}
 
-      {/* Error message */}
+      {/* Error tooltip */}
       {isError && errorMsg && (
-        <div className="mx-2 mb-2 px-2 py-1.5 rounded-md bg-red-500/10 border border-red-500/20">
-          <p className="text-red-300 text-[10px] break-words leading-relaxed">
+        <div className="px-3 pb-2 border-t border-red-500/20">
+          <p className="text-[10px] text-red-400/80 leading-relaxed mt-1.5 break-words">
             {errorMsg}
           </p>
         </div>

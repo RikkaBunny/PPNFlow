@@ -1,11 +1,13 @@
 import { useEffect, useRef, useCallback } from "react";
-import { engineApi, onEngineEvent } from "@/lib/tauriApi";
+import { engineApi, onEngineEvent, isTauri } from "@/lib/tauriApi";
 import { useManifestStore } from "@/stores/manifestStore";
 import { useExecutionStore } from "@/stores/executionStore";
+import { MOCK_MANIFESTS } from "@/lib/mockManifests";
 
 /**
  * Manages the Python engine lifecycle and routes incoming events
  * to the appropriate stores.
+ * Falls back to mock manifests when running outside Tauri (pure browser dev).
  */
 export function useEngine() {
   const setManifests  = useManifestStore((s) => s.setManifests);
@@ -20,7 +22,6 @@ export function useEngine() {
       const d = evt.data as Record<string, unknown>;
       switch (evt.event) {
         case "engine_ready":
-          // Engine started: fetch node schemas
           engineApi.getNodeSchemas().then((res) => {
             const r = res as { result?: { schemas: unknown[] }; schemas?: unknown[] };
             const schemas = r?.result?.schemas ?? (r as { schemas?: unknown[] })?.schemas ?? [];
@@ -66,16 +67,19 @@ export function useEngine() {
   );
 
   useEffect(() => {
-    // Subscribe to engine events
-    onEngineEvent(handleEvent).then((unlisten) => {
-      unlistenRef.current = unlisten;
-    });
-
-    // Start the engine
-    engineApi.start().catch(console.error);
+    if (isTauri()) {
+      // Running inside Tauri — connect to real Python engine
+      onEngineEvent(handleEvent).then((unlisten) => {
+        unlistenRef.current = unlisten;
+      });
+      engineApi.start().catch(console.error);
+    } else {
+      // Browser dev mode — load mock manifests so the UI is usable
+      setManifests(MOCK_MANIFESTS);
+    }
 
     return () => {
       unlistenRef.current?.();
     };
-  }, [handleEvent]);
+  }, [handleEvent, setManifests]);
 }

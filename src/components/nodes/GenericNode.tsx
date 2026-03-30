@@ -1,25 +1,23 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { NodeShell } from "./NodeShell";
+import { NodeIcon } from "./NodeIcon";
 import type { FlowNodeData, PortDef } from "@/types/node";
 import { useManifestStore } from "@/stores/manifestStore";
-import { getPortColor } from "@/lib/nodeColors";
-import type { NodeStatus } from "@/types/execution";
+import { getCategoryStyle, getNodeIcon, getPortColor } from "@/lib/nodeColors";
 
-/** Space handles evenly along the node side */
-function handleTop(index: number, total: number): string {
-  if (total === 1) return "50%";
-  const step = 80 / (total - 1);
-  return `${10 + index * step}%`;
+function handleOffset(index: number, total: number): string {
+  if (total <= 1) return "50%";
+  const step = 70 / (total - 1);
+  return `${15 + index * step}%`;
 }
 
-/** Extract typed fields from the raw data record */
 function extractNodeData(raw: Record<string, unknown>) {
   return {
     nodeType: raw.nodeType as string,
     label: raw.label as string,
     config: (raw.config ?? {}) as Record<string, unknown>,
-    status: (raw.status ?? "idle") as NodeStatus,
+    status: raw.status as FlowNodeData["status"],
     errorMsg: raw.errorMsg as string | undefined,
     lastOutputs: (raw.lastOutputs ?? {}) as Record<string, unknown>,
   };
@@ -33,8 +31,11 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
   const inputs: PortDef[] = manifest?.inputs ?? [];
   const outputs: PortDef[] = manifest?.outputs ?? [];
   const label = manifest?.label ?? d.label ?? d.nodeType;
+  const category = manifest?.category;
+  const catStyle = getCategoryStyle(category);
+  const iconName = getNodeIcon(d.nodeType, category);
 
-  // Check for image preview in last run outputs
+  // Image preview
   const rawPreview = d.lastOutputs["_preview_image"] ?? d.lastOutputs["_display_image"];
   const imagePreview = typeof rawPreview === "string" ? rawPreview : null;
   const displayText = d.lastOutputs["_display"];
@@ -42,60 +43,29 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
   return (
     <NodeShell
       label={label}
-      category={manifest?.category}
+      icon={<NodeIcon name={iconName} size={18} color={catStyle.color} />}
+      iconBg={catStyle.bg}
       status={d.status}
       errorMsg={d.errorMsg}
       selected={selected}
     >
-      {imagePreview !== null && (
+      {/* Image preview */}
+      {imagePreview !== null ? (
         <img
           src={imagePreview}
           alt="preview"
-          className="w-full rounded-md object-contain max-h-32 border border-white/5"
+          className="w-full rounded object-contain max-h-28"
         />
-      )}
+      ) : null}
 
-      {displayText != null && (
-        <div className="text-white/50 text-[10px] max-h-16 overflow-auto break-words whitespace-pre-wrap bg-white/5 rounded-md px-2 py-1">
+      {/* Text display */}
+      {displayText != null ? (
+        <div className="text-[10px] text-white/40 max-h-14 overflow-auto break-words whitespace-pre-wrap bg-white/[0.03] rounded px-2 py-1">
           {String(displayText)}
         </div>
-      )}
+      ) : null}
 
-      {/* Port labels */}
-      <div className="flex justify-between gap-4">
-        {inputs.length > 0 && (
-          <div className="space-y-1">
-            {inputs.map((p) => (
-              <div key={p.name} className="flex items-center gap-1.5">
-                <span
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ background: getPortColor(p.type) }}
-                />
-                <span className="text-[10px] text-white/40">{p.label}</span>
-                {p.optional && (
-                  <span className="text-[9px] text-white/20 italic">opt</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {outputs.length > 0 && (
-          <div className="space-y-1 ml-auto">
-            {outputs.map((p) => (
-              <div key={p.name} className="flex items-center gap-1.5 justify-end">
-                <span className="text-[10px] text-white/40">{p.label}</span>
-                <span
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ background: getPortColor(p.type) }}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Input handles (left side) */}
+      {/* Input handles */}
       {inputs.map((p, i) => (
         <Handle
           key={`in-${p.name}`}
@@ -103,17 +73,18 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
           position={Position.Left}
           id={p.name}
           style={{
-            top: handleTop(i, inputs.length),
+            top: handleOffset(i, inputs.length),
             background: getPortColor(p.type),
-            width: 10,
-            height: 10,
-            border: "2px solid #1a1a26",
+            width: 9,
+            height: 9,
+            border: "2px solid var(--color-node-bg)",
             borderRadius: "50%",
+            left: -5,
           }}
         />
       ))}
 
-      {/* Output handles (right side) */}
+      {/* Output handles */}
       {outputs.map((p, i) => (
         <Handle
           key={`out-${p.name}`}
@@ -121,12 +92,13 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
           position={Position.Right}
           id={p.name}
           style={{
-            top: handleTop(i, outputs.length),
+            top: handleOffset(i, outputs.length),
             background: getPortColor(p.type),
-            width: 10,
-            height: 10,
-            border: "2px solid #1a1a26",
+            width: 9,
+            height: 9,
+            border: "2px solid var(--color-node-bg)",
             borderRadius: "50%",
+            right: -5,
           }}
         />
       ))}
