@@ -8,7 +8,8 @@ import type { FlowNodeData } from "@/types/node";
 import { useManifestStore } from "@/stores/manifestStore";
 import { useExecutionStore } from "@/stores/executionStore";
 
-/** Topological sort via Kahn's algorithm */
+/** Tiny 1x1 pink pixel as base64 placeholder */
+const MOCK_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAA40lEQVR42u3RAQ0AAAjDMO5fNCCDkC5z0HTs3OUqwCACAxEYiMBABAYiMBCBgQgMRGAgAgMRGIjAQAQGIjAQgYEIDERgIAIDERiIwEAEBiIwEIGBCAxEYCACAxEYiMBABAYiMBCBgQgMRGAgAgMRGIjAQAQGIjAQgYEIDERgIAIDERiIwEAEBiIwEIGBCAxEYCACAxEYiMBABAYiMBCBgQgMRGAgAgMRGIjAQAQGIjAQgYEIDERgIAIDERiIwEAEBiIwEIGBCAxEYCACAxEYiMBABAYiMBCBgQgMRGAgAgP5YQF/n1cE2gVs3gAAAABJRU5ErkJggg==";
 function topoSort(nodes: Node<FlowNodeData>[], edges: Edge[]): string[] {
   const inDeg: Record<string, number> = {};
   const deps: Record<string, string[]> = {};
@@ -81,7 +82,7 @@ function mockOutputs(nodeType: string, config: Record<string, unknown>): Record<
         else result[port.name] = true;
         break;
       case "IMAGE":
-        result[port.name] = "/mock/image.png";
+        result[port.name] = MOCK_IMAGE;
         break;
       case "JSON":
         if (nodeType === "json_parse") result[port.name] = { action: "click", x: 500, y: 300 };
@@ -99,9 +100,15 @@ function mockOutputs(nodeType: string, config: Record<string, unknown>): Record<
     }
   }
 
-  // Special _display for output nodes
+  // Special internal keys
   if (nodeType === "text_display") result["_display"] = "Mock display text";
   if (nodeType === "log") result["_display"] = `[${config.label ?? "LOG"}] mock_value`;
+  if (nodeType === "image_display") result["_display_image"] = MOCK_IMAGE;
+
+  // Add preview for image-producing nodes
+  if (["screenshot", "window_screenshot", "image_crop", "image_resize"].includes(nodeType)) {
+    result["_preview_image"] = MOCK_IMAGE;
+  }
 
   return result;
 }
