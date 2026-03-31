@@ -3,6 +3,7 @@ import { engineApi, isTauri } from "@/lib/tauriApi";
 import { useFlowStore } from "@/stores/flowStore";
 import { useExecutionStore } from "@/stores/executionStore";
 import { serializeGraph } from "@/lib/graphSerializer";
+import { mockExecute } from "@/lib/mockExecutor";
 
 export function useExecution() {
   const nodes    = useFlowStore((s) => s.nodes);
@@ -14,35 +15,37 @@ export function useExecution() {
   const currentExecutionId = useExecutionStore((s) => s.currentExecutionId);
   const clearAll           = useExecutionStore((s) => s.clearAll);
   const execIdRef          = useRef<string | null>(null);
+  const stopRef            = useRef(false);
 
   const run = useCallback(async () => {
     if (isRunning) return;
     clearAll();
+    stopRef.current = false;
     const id = crypto.randomUUID();
     execIdRef.current = id;
-    const graph = serializeGraph(nodes, edges, settings, name);
+
     if (isTauri()) {
+      const graph = serializeGraph(nodes, edges, settings, name);
       await engineApi.executeGraph(graph, {
         id,
         mode: settings.run_mode,
         loop_delay_ms: settings.loop_delay_ms,
       });
+    } else {
+      // Browser dev mode — mock execution
+      await mockExecute(nodes, edges, stopRef);
     }
   }, [isRunning, clearAll, nodes, edges, settings, name]);
 
-  /**
-   * Run to a specific node — execute all upstream nodes up to and including targetNodeId.
-   * We build a subgraph containing only the target node and its ancestors.
-   */
   const runToNode = useCallback(async (targetNodeId: string) => {
     if (isRunning) return;
     clearAll();
+    stopRef.current = false;
 
-    // Find all ancestor nodes via BFS backwards through edges
+    // BFS backwards to find all ancestors
     const needed = new Set<string>();
     const queue = [targetNodeId];
     needed.add(targetNodeId);
-
     while (queue.length > 0) {
       const current = queue.shift()!;
       for (const edge of edges) {
@@ -53,24 +56,26 @@ export function useExecution() {
       }
     }
 
-    // Build subgraph
     const subNodes = nodes.filter((n) => needed.has(n.id));
     const subEdges = edges.filter((e) => needed.has(e.source) && needed.has(e.target));
 
-    const id = crypto.randomUUID();
-    execIdRef.current = id;
-    const graph = serializeGraph(subNodes, subEdges, { ...settings, run_mode: "once" }, name);
-
     if (isTauri()) {
+      const id = crypto.randomUUID();
+      execIdRef.current = id;
+      const graph = serializeGraph(subNodes, subEdges, { ...settings, run_mode: "once" }, name);
       await engineApi.executeGraph(graph, { id, mode: "once" });
+    } else {
+      await mockExecute(subNodes, subEdges, stopRef);
     }
   }, [isRunning, clearAll, nodes, edges, settings, name]);
 
   const stop = useCallback(async () => {
+    stopRef.current = true;
     const id = execIdRef.current ?? currentExecutionId;
     if (id && isTauri()) {
       await engineApi.stopExecution(id);
     }
+    useExecutionStore.getState().setRunning(false);
   }, [currentExecutionId]);
 
   return { run, stop, runToNode, isRunning };
