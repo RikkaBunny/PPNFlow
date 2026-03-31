@@ -1,8 +1,13 @@
 /**
- * Flow editor canvas — n8n style.
- * Full-screen canvas with floating "+" button and minimap.
+ * Flow editor canvas with:
+ * - Right-click context menu to add nodes
+ * - Keyboard shortcut (Space) to open node search
+ * - Snap-to-grid (20px)
+ * - Connection type validation
+ * - Drag-drop from palette
+ * - Floating "+" button
  */
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -10,6 +15,7 @@ import {
   MiniMap,
   type Node,
   type NodeMouseHandler,
+  type IsValidConnection,
   BackgroundVariant,
   ConnectionMode,
   type ReactFlowInstance,
@@ -23,6 +29,8 @@ import { useExecutionStore } from "@/stores/executionStore";
 import { useManifestStore } from "@/stores/manifestStore";
 import type { FlowNodeData } from "@/types/node";
 import { createFlowNode } from "./createFlowNode";
+import { ContextMenu, type ContextMenuState } from "./ContextMenu";
+import type { NodeManifest } from "@/types/node";
 
 interface Props {
   onSelectNode: (node: Node<FlowNodeData> | null) => void;
@@ -41,6 +49,7 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
   const nodeStates = useExecutionStore((s) => s.nodeStates);
 
   const rfInstance = useRef<ReactFlowInstance<Node<FlowNodeData>> | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   // Sync execution state onto node data
   useEffect(() => {
@@ -71,7 +80,9 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
         ...n,
         data: {
           ...n.data,
-          label: byType[(n.data as Record<string, unknown>).nodeType as string]?.label ?? (n.data as Record<string, unknown>).label,
+          label:
+            byType[(n.data as Record<string, unknown>).nodeType as string]
+              ?.label ?? (n.data as Record<string, unknown>).label,
         },
       }))
     );
@@ -79,13 +90,91 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
   }, [byType]);
 
   const onNodeClick: NodeMouseHandler<Node<FlowNodeData>> = useCallback(
-    (_, node) => onSelectNode(node),
+    (_, node) => {
+      setContextMenu(null);
+      onSelectNode(node);
+    },
     [onSelectNode]
   );
 
-  const onPaneClick = useCallback(() => onSelectNode(null), [onSelectNode]);
+  const onPaneClick = useCallback(
+    (_e: React.MouseEvent) => {
+      // Don't close selection if we just opened a context menu
+      if (contextMenu) {
+        setContextMenu(null);
+        return;
+      }
+      onSelectNode(null);
+    },
+    [onSelectNode, contextMenu]
+  );
 
-  // Drag-and-drop from palette
+  // ── Right-click context menu ──
+  const onContextMenu = useCallback(
+    (e: MouseEvent | React.MouseEvent) => {
+      e.preventDefault();
+      if (!rfInstance.current) return;
+      const bounds = (e.target as HTMLElement)
+        .closest(".react-flow")
+        ?.getBoundingClientRect();
+      if (!bounds) return;
+      const flowPos = rfInstance.current.screenToFlowPosition({
+        x: e.clientX - bounds.left,
+        y: e.clientY - bounds.top,
+      });
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        flowX: flowPos.x,
+        flowY: flowPos.y,
+      });
+    },
+    []
+  );
+
+  const handleContextAdd = useCallback(
+    (manifest: NodeManifest, position: { x: number; y: number }) => {
+      // Snap to grid
+      const snapped = {
+        x: Math.round(position.x / 20) * 20,
+        y: Math.round(position.y / 20) * 20,
+      };
+      const node = createFlowNode(manifest, snapped);
+      addNode(node);
+    },
+    [addNode]
+  );
+
+  // ── Keyboard shortcuts ──
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      // Space to open palette (only when not typing in input)
+      if (
+        e.code === "Space" &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement) &&
+        !(e.target instanceof HTMLSelectElement)
+      ) {
+        e.preventDefault();
+        onOpenPalette();
+      }
+      // Ctrl+Z / Ctrl+Shift+Z for undo/redo
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          useFlowStore.getState().undo();
+        }
+        if ((e.key === "z" && e.shiftKey) || e.key === "y") {
+          e.preventDefault();
+          useFlowStore.getState().redo();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onOpenPalette]);
+
+  // ── Drag-and-drop from palette ──
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -96,31 +185,78 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
       e.preventDefault();
       const nodeType = e.dataTransfer.getData("application/ppnflow-node");
       if (!nodeType || !byType[nodeType]) return;
-
       const manifest = byType[nodeType];
       const bounds = (e.target as HTMLElement)
         .closest(".react-flow")
         ?.getBoundingClientRect();
       if (!bounds || !rfInstance.current) return;
-
       const position = rfInstance.current.screenToFlowPosition({
         x: e.clientX - bounds.left,
         y: e.clientY - bounds.top,
       });
-
-      const node = createFlowNode(manifest, position);
+      // Snap to grid
+      const snapped = {
+        x: Math.round(position.x / 20) * 20,
+        y: Math.round(position.y / 20) * 20,
+      };
+      const node = createFlowNode(manifest, snapped);
       addNode(node);
     },
     [byType, addNode]
   );
 
-  // Double-click canvas to add node
-  const onDoubleClick = useCallback(() => {
-    onOpenPalette();
-  }, [onOpenPalette]);
+  // ── Connection type validation ──
+  const isValidConnection: IsValidConnection = useCallback(
+    (connection) => {
+      if (!connection.source || !connection.target) return false;
+      // No self-connections
+      if (connection.source === connection.target) return false;
+
+      // Check port type compatibility
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+      if (!sourceNode || !targetNode) return false;
+
+      const sourceType = (sourceNode.data as Record<string, unknown>)
+        .nodeType as string;
+      const targetType = (targetNode.data as Record<string, unknown>)
+        .nodeType as string;
+      const sourceManifest = byType[sourceType];
+      const targetManifest = byType[targetType];
+      if (!sourceManifest || !targetManifest) return true; // allow if no manifest
+
+      const sourcePort = sourceManifest.outputs.find(
+        (p) => p.name === connection.sourceHandle
+      );
+      const targetPort = targetManifest.inputs.find(
+        (p) => p.name === connection.targetHandle
+      );
+      if (!sourcePort || !targetPort) return true;
+
+      // ANY type matches everything
+      if (
+        sourcePort.type.toUpperCase() === "ANY" ||
+        targetPort.type.toUpperCase() === "ANY"
+      )
+        return true;
+
+      // Same type always OK
+      if (sourcePort.type.toUpperCase() === targetPort.type.toUpperCase())
+        return true;
+
+      // Allow STRING → most types (will be parsed by the node)
+      if (sourcePort.type.toUpperCase() === "STRING") return true;
+
+      return false;
+    },
+    [nodes, byType]
+  );
 
   return (
-    <div className="w-full h-full relative" style={{ background: "var(--color-canvas)" }}>
+    <div
+      className="w-full h-full relative"
+      style={{ background: "var(--color-canvas)" }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -130,6 +266,7 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
         onNodeClick={onNodeClick}
         onNodeDoubleClick={(_, node) => onSelectNode(node)}
         onPaneClick={onPaneClick}
+        onPaneContextMenu={onContextMenu}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onInit={(instance) => {
@@ -137,7 +274,10 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
         }}
         nodeTypes={nodeTypes}
         connectionMode={ConnectionMode.Loose}
+        isValidConnection={isValidConnection}
         fitView
+        snapToGrid
+        snapGrid={[20, 20]}
         deleteKeyCode="Delete"
         defaultEdgeOptions={{
           style: { stroke: "var(--color-connection)", strokeWidth: 2 },
@@ -157,22 +297,19 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
           size={1.2}
           color="var(--color-canvas-dot)"
         />
-        <Controls
-          position="bottom-left"
-          showInteractive={false}
-        />
+        <Controls position="bottom-left" showInteractive={false} />
         <MiniMap
           position="bottom-right"
           nodeColor={(n) => {
             const data = n.data as unknown as FlowNodeData;
             const status = data.status;
             const colors: Record<string, string> = {
-              running: "#1fa8f2",
-              done: "#4cd964",
-              error: "#ff3b5c",
-              cached: "#6b7280",
+              running: "#3498db",
+              done: "#2ecc71",
+              error: "#e74c3c",
+              cached: "#95a5a6",
             };
-            return colors[status ?? ""] ?? "#363655";
+            return colors[status ?? ""] ?? "#d4bfc8";
           }}
           maskColor="rgba(248,245,247,0.85)"
           style={{
@@ -185,17 +322,26 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
         />
       </ReactFlow>
 
-      {/* Floating "+" button (n8n style) */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2" style={{ zIndex: 5 }}>
+      {/* Floating "+" button */}
+      <div
+        className="absolute bottom-6 left-1/2 -translate-x-1/2"
+        style={{ zIndex: 5 }}
+      >
         <button
           onClick={onOpenPalette}
-          onDoubleClick={onDoubleClick}
           className="add-node-btn"
-          title="Add a node"
+          title="Add a node (or press Space)"
         >
           <Plus size={22} strokeWidth={2.5} />
         </button>
       </div>
+
+      {/* Right-click context menu */}
+      <ContextMenu
+        state={contextMenu}
+        onClose={() => setContextMenu(null)}
+        onAddNode={handleContextAdd}
+      />
     </div>
   );
 }

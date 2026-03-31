@@ -36,15 +36,19 @@ function AppInner() {
   const setName = useFlowStore((s) => s.setWorkflowName);
 
   const handleAddNode = useCallback(
-    (manifest: NodeManifest) => {
+    (manifest: NodeManifest, position?: { x: number; y: number }) => {
       const existingCount = nodes.length;
-      const node = createFlowNode(manifest, {
+      const pos = position ?? {
         x: 200 + (existingCount % 4) * 280,
         y: 150 + Math.floor(existingCount / 4) * 150 + (Math.random() * 30 - 15),
-      });
+      };
+      // Snap to grid
+      pos.x = Math.round(pos.x / 20) * 20;
+      pos.y = Math.round(pos.y / 20) * 20;
+      const node = createFlowNode(manifest, pos);
       addNode(node);
     },
-    [addNode]
+    [addNode, nodes.length]
   );
 
   const handleDeleteNode = useCallback(

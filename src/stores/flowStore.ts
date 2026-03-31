@@ -12,11 +12,22 @@ import {
 import type { FlowNodeData } from "@/types/node";
 import type { WorkflowSettings } from "@/types/workflow";
 
+interface Snapshot {
+  nodes: Node<FlowNodeData>[];
+  edges: Edge[];
+}
+
+const MAX_HISTORY = 50;
+
 interface FlowState {
   nodes: Node<FlowNodeData>[];
   edges: Edge[];
   settings: WorkflowSettings;
   workflowName: string;
+
+  // Undo/redo
+  history: Snapshot[];
+  future: Snapshot[];
 
   // Actions
   setNodes: (nodes: Node<FlowNodeData>[]) => void;
@@ -29,6 +40,18 @@ interface FlowState {
   updateSettings: (settings: Partial<WorkflowSettings>) => void;
   setWorkflowName: (name: string) => void;
   resetGraph: () => void;
+  undo: () => void;
+  redo: () => void;
+}
+
+function pushHistory(state: FlowState): Partial<FlowState> {
+  return {
+    history: [
+      ...state.history.slice(-(MAX_HISTORY - 1)),
+      { nodes: state.nodes, edges: state.edges },
+    ],
+    future: [],
+  };
 }
 
 export const useFlowStore = create<FlowState>((set, get) => ({
@@ -39,6 +62,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     run_mode: "once",
     loop_delay_ms: 500,
   },
+  history: [],
+  future: [],
 
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
@@ -49,11 +74,21 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   onEdgesChange: (changes) =>
     set({ edges: applyEdgeChanges(changes, get().edges) }),
 
-  onConnect: (connection) =>
-    set({ edges: addEdge({ ...connection, animated: false }, get().edges) }),
+  onConnect: (connection) => {
+    const s = get();
+    set({
+      ...pushHistory(s),
+      edges: addEdge({ ...connection, animated: false }, s.edges),
+    });
+  },
 
-  addNode: (node) =>
-    set({ nodes: [...get().nodes, node] }),
+  addNode: (node) => {
+    const s = get();
+    set({
+      ...pushHistory(s),
+      nodes: [...s.nodes, node],
+    });
+  },
 
   updateNodeConfig: (nodeId, config) =>
     set({
@@ -69,5 +104,32 @@ export const useFlowStore = create<FlowState>((set, get) => ({
 
   setWorkflowName: (name) => set({ workflowName: name }),
 
-  resetGraph: () => set({ nodes: [], edges: [] }),
+  resetGraph: () => {
+    const s = get();
+    set({ ...pushHistory(s), nodes: [], edges: [] });
+  },
+
+  undo: () => {
+    const { history, nodes, edges, future } = get();
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    set({
+      nodes: prev.nodes,
+      edges: prev.edges,
+      history: history.slice(0, -1),
+      future: [{ nodes, edges }, ...future.slice(0, MAX_HISTORY - 1)],
+    });
+  },
+
+  redo: () => {
+    const { future, nodes, edges, history } = get();
+    if (future.length === 0) return;
+    const next = future[0];
+    set({
+      nodes: next.nodes,
+      edges: next.edges,
+      future: future.slice(1),
+      history: [...history, { nodes, edges }],
+    });
+  },
 }));

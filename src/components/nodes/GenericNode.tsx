@@ -6,10 +6,19 @@ import type { FlowNodeData, PortDef } from "@/types/node";
 import { useManifestStore } from "@/stores/manifestStore";
 import { getCategoryStyle, getNodeIcon, getPortColor } from "@/lib/nodeColors";
 
-function handleOffset(index: number, total: number): string {
-  if (total <= 1) return "50%";
-  const step = 70 / (total - 1);
-  return `${15 + index * step}%`;
+/** Port type short labels */
+const TYPE_SHORT: Record<string, string> = {
+  STRING: "str",
+  IMAGE: "img",
+  INT: "int",
+  FLOAT: "flt",
+  BOOL: "bool",
+  JSON: "json",
+  ANY: "any",
+};
+
+function typeShort(t: string) {
+  return TYPE_SHORT[t.toUpperCase()] ?? t.toLowerCase().slice(0, 4);
 }
 
 function extractNodeData(raw: Record<string, unknown>) {
@@ -39,6 +48,15 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
   const imagePreview = typeof rawPreview === "string" ? rawPreview : null;
   const displayText = d.lastOutputs["_display"];
 
+  // Calculate handle position based on port count
+  const hasBody = inputs.length > 0 || outputs.length > 0;
+  const headerH = 44;
+  const rowH = 22;
+  const bodyPadTop = 6;
+  function portTop(index: number): number {
+    return headerH + bodyPadTop + index * rowH + rowH / 2;
+  }
+
   return (
     <NodeShell
       label={label}
@@ -48,6 +66,7 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
       errorMsg={d.errorMsg}
       selected={selected}
     >
+      {/* Image preview */}
       {imagePreview !== null ? (
         <img
           src={imagePreview}
@@ -57,12 +76,71 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
         />
       ) : null}
 
+      {/* Text display */}
       {displayText != null ? (
-        <div className="text-[10px] max-h-14 overflow-auto break-words whitespace-pre-wrap rounded-lg px-2 py-1"
-          style={{ color: "var(--color-text-secondary)", background: "var(--color-accent-light)" }}>
+        <div
+          className="text-[10px] max-h-14 overflow-auto break-words whitespace-pre-wrap rounded-lg px-2 py-1"
+          style={{ color: "var(--color-text-secondary)", background: "var(--color-accent-light)" }}
+        >
           {String(displayText)}
         </div>
       ) : null}
+
+      {/* Port labels row */}
+      {hasBody && (
+        <div className="flex justify-between gap-2 mt-1">
+          {/* Input labels */}
+          <div className="space-y-0.5 min-w-0">
+            {inputs.map((p) => (
+              <div key={p.name} className="flex items-center gap-1.5 h-[22px]">
+                <span
+                  className="text-[9px] font-mono px-1 py-0.5 rounded leading-none"
+                  style={{
+                    color: getPortColor(p.type),
+                    background: getPortColor(p.type) + "15",
+                  }}
+                >
+                  {typeShort(p.type)}
+                </span>
+                <span
+                  className="text-[10px] truncate"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  {p.label}
+                </span>
+                {p.optional && (
+                  <span className="text-[8px] italic" style={{ color: "var(--color-text-muted)" }}>
+                    ?
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Output labels */}
+          <div className="space-y-0.5 min-w-0 text-right">
+            {outputs.map((p) => (
+              <div key={p.name} className="flex items-center gap-1.5 justify-end h-[22px]">
+                <span
+                  className="text-[10px] truncate"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  {p.label}
+                </span>
+                <span
+                  className="text-[9px] font-mono px-1 py-0.5 rounded leading-none"
+                  style={{
+                    color: getPortColor(p.type),
+                    background: getPortColor(p.type) + "15",
+                  }}
+                >
+                  {typeShort(p.type)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Input handles */}
       {inputs.map((p, i) => (
@@ -71,8 +149,9 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
           type="target"
           position={Position.Left}
           id={p.name}
+          title={`${p.label} (${p.type})`}
           style={{
-            top: handleOffset(i, inputs.length),
+            top: portTop(i),
             background: getPortColor(p.type),
             width: 10,
             height: 10,
@@ -91,8 +170,9 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
           type="source"
           position={Position.Right}
           id={p.name}
+          title={`${p.label} (${p.type})`}
           style={{
-            top: handleOffset(i, outputs.length),
+            top: portTop(i),
             background: getPortColor(p.type),
             width: 10,
             height: 10,

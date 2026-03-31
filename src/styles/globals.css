@@ -296,3 +296,37 @@ body {
 .add-node-btn:active {
   transform: scale(0.95);
 }
+
+/* ── Handle tooltip (native title) enhancement ─────────────────── */
+
+.react-flow__handle[title] {
+  position: relative;
+}
+
+/* ── Snap grid indicator ───────────────────────────────────────── */
+
+.react-flow__node.dragging {
+  opacity: 0.85;
+}
+
+/* ── Connection line validation colors ─────────────────────────── */
+
+.react-flow__connection.valid .react-flow__connection-line {
+  stroke: var(--color-success) !important;
+}
+
+.react-flow__connection.invalid .react-flow__connection-line {
+  stroke: var(--color-error) !important;
+  stroke-dasharray: 4 4 !important;
+}
+
+/* ── Port type badge styles ────────────────────────────────────── */
+
+.ppn-node .port-type-badge {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 9px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
