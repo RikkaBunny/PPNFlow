@@ -41,6 +41,8 @@ import {
   FileInput,
   FileOutput,
   AppWindow,
+  Gamepad2,
+  BookTemplate,
   type LucideProps,
 } from "lucide-react";
 
@@ -53,6 +55,8 @@ const ICONS: Record<string, React.ComponentType<LucideProps>> = {
   Crop, Maximize2, ScanSearch, ScanText, Pipette,
   LayoutList, ScrollText, RotateCw, FileInput, FileOutput,
   AppWindow,
+  Gamepad2,
+  BookTemplate,
   // Aliases
   Replace: ArrowRightLeft,
 };

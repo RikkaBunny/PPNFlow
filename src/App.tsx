@@ -13,11 +13,14 @@ import { Toolbar } from "@/components/editor/Toolbar";
 import { ExecutionLog } from "@/components/editor/ExecutionLog";
 import { createFlowNode } from "@/components/editor/createFlowNode";
 
+import { TemplatePicker } from "@/components/editor/TemplatePicker";
+
 import { useEngine } from "@/hooks/useEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import type { FlowNodeData, NodeManifest } from "@/types/node";
 import { serializeGraph, deserializeGraph } from "@/lib/graphSerializer";
 import type { WorkflowFile } from "@/types/workflow";
+import type { TemplateInfo } from "@/lib/templates";
 
 function AppInner() {
   useEngine();
@@ -25,6 +28,7 @@ function AppInner() {
   const [selectedNode, setSelectedNode] = useState<Node<FlowNodeData> | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const addNode = useFlowStore((s) => s.addNode);
   const nodes = useFlowStore((s) => s.nodes);
@@ -82,6 +86,18 @@ function AppInner() {
     URL.revokeObjectURL(url);
   }, [nodes, edges, settings, name]);
 
+  const handleLoadTemplate = useCallback(
+    (template: TemplateInfo) => {
+      const { nodes: n, edges: ed, settings: s } = deserializeGraph(template.workflow);
+      setNodes(n);
+      setEdges(ed);
+      useFlowStore.getState().updateSettings(s);
+      setName(template.workflow.name);
+      setSelectedNode(null);
+    },
+    [setNodes, setEdges, setName]
+  );
+
   const handleLoad = useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
@@ -116,6 +132,7 @@ function AppInner() {
         onSave={handleSave}
         onLoad={handleLoad}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenTemplates={() => setTemplatesOpen(true)}
       />
 
       {/* Canvas (full area) */}
@@ -139,6 +156,13 @@ function AppInner() {
         node={selectedNode}
         onClose={() => setSelectedNode(null)}
         onDeleteNode={handleDeleteNode}
+      />
+
+      {/* Template Picker */}
+      <TemplatePicker
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        onLoad={handleLoadTemplate}
       />
 
       {/* Settings Modal */}

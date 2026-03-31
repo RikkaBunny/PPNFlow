@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Settings,
   Repeat,
+  BookTemplate,
 } from "lucide-react";
 import { useFlowStore } from "@/stores/flowStore";
 import { useExecution } from "@/hooks/useExecution";
@@ -15,9 +16,10 @@ interface Props {
   onSave: () => void;
   onLoad: () => void;
   onOpenSettings: () => void;
+  onOpenTemplates: () => void;
 }
 
-export function Toolbar({ onSave, onLoad, onOpenSettings }: Props) {
+export function Toolbar({ onSave, onLoad, onOpenSettings, onOpenTemplates }: Props) {
   const { run, stop, isRunning } = useExecution();
   const loopIteration = useExecutionStore((s) => s.loopIteration);
   const settings = useFlowStore((s) => s.settings);
@@ -77,6 +79,7 @@ export function Toolbar({ onSave, onLoad, onOpenSettings }: Props) {
 
         <div className="w-px h-5" style={{ background: "var(--color-border)" }} />
 
+        <IconBtn onClick={onOpenTemplates} title="Templates"><BookTemplate size={15} /></IconBtn>
         <IconBtn onClick={onSave} title="Save"><Save size={15} /></IconBtn>
         <IconBtn onClick={onLoad} title="Open"><FolderOpen size={15} /></IconBtn>
         <IconBtn onClick={onOpenSettings} title="Settings"><Settings size={15} /></IconBtn>
