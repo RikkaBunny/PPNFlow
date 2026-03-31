@@ -249,7 +249,7 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
       { name: "blocks", type: "JSON", label: "Blocks" },
     ],
     config_schema: [
-      { name: "engine", type: "select", label: "Engine", default: "pytesseract", options: ["pytesseract", "easyocr"] },
+      { name: "engine", type: "select", label: "Engine", default: "auto", options: ["auto", "pytesseract", "easyocr", "winocr"] },
       { name: "lang", type: "string", label: "Language", default: "eng" },
     ],
   },
