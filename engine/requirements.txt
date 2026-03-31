@@ -1,11 +1,18 @@
 # Core (required)
-# No extra packages needed for the base engine
-
-# Automation (for Screenshot / Mouse / Keyboard nodes)
-mss>=9.0.1
-pyautogui>=0.9.54
 Pillow>=10.0.0
 
-# AI providers (install as needed)
+# Screen capture & automation
+mss>=9.0.1
+pyautogui>=0.9.54
+pygetwindow>=0.0.9
+
+# AI providers
 openai>=1.0.0
 anthropic>=0.25.0
+
+# Image processing (optional - for image_match node)
+# opencv-python>=4.8.0
+
+# OCR (optional - install one or both)
+# pytesseract>=0.3.10
+# easyocr>=1.7.0

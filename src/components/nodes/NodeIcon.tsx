@@ -1,6 +1,5 @@
 /**
- * Renders a Lucide icon by name. Used by GenericNode to display
- * the correct icon for each node type.
+ * Renders a Lucide icon by name.
  */
 import {
   Camera,
@@ -21,28 +20,41 @@ import {
   ArrowRightLeft,
   Eye,
   Box,
+  Globe,
+  Terminal,
+  Plus,
+  Scissors,
+  Hash,
+  Dices,
+  ArrowUpDown,
+  GripHorizontal,
+  Calculator,
+  Scale,
+  Crop,
+  Maximize2,
+  ScanSearch,
+  ScanText,
+  Pipette,
+  LayoutList,
+  ScrollText,
+  RotateCw,
+  FileInput,
+  FileOutput,
+  AppWindow,
   type LucideProps,
 } from "lucide-react";
 
 const ICONS: Record<string, React.ComponentType<LucideProps>> = {
-  Camera,
-  Sparkles,
-  MousePointer2,
-  Move,
-  Keyboard,
-  Type,
-  FileText,
-  Image,
-  Braces,
-  Search,
-  GitBranch,
-  Clock,
-  FileCode,
-  Download,
-  Upload,
-  ArrowRightLeft,
-  Eye,
-  Box,
+  Camera, Sparkles, MousePointer2, Move, Keyboard, Type,
+  FileText, Image, Braces, Search, GitBranch, Clock,
+  FileCode, Download, Upload, ArrowRightLeft, Eye, Box,
+  Globe, Terminal, Plus, Scissors, Hash, Dices,
+  ArrowUpDown, GripHorizontal, Calculator, Scale,
+  Crop, Maximize2, ScanSearch, ScanText, Pipette,
+  LayoutList, ScrollText, RotateCw, FileInput, FileOutput,
+  AppWindow,
+  // Aliases
+  Replace: ArrowRightLeft,
 };
 
 interface Props {
@@ -51,7 +63,7 @@ interface Props {
   color?: string;
 }
 
-export function NodeIcon({ name, size = 18, color = "white" }: Props) {
+export function NodeIcon({ name, size = 18, color = "currentColor" }: Props) {
   const Icon = ICONS[name] ?? ICONS.Box;
   return <Icon size={size} color={color} />;
 }
