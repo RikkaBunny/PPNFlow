@@ -1,11 +1,12 @@
 @echo off
 chcp 65001 >nul 2>&1
-title PPNFlow
+title PPNFlow (Web Preview)
 cd /d "%~dp0"
 
 echo.
 echo   ╔═══════════════════════════════════════╗
-echo   ║         PPNFlow - Starting...         ║
+echo   ║     PPNFlow - Web Preview Mode        ║
+echo   ║     (No Rust/Tauri required)          ║
 echo   ╚═══════════════════════════════════════╝
 echo.
 
@@ -13,46 +14,25 @@ echo.
 call :FIND_NODE
 if %errorlevel% neq 0 goto :NO_NODE
 
-:: ── Find Rust ──
-where rustc >nul 2>&1
-if %errorlevel% neq 0 (
-    echo   [!] Rust not found.
-    echo       Install from: https://rustup.rs/
-    echo       Run rustup-init.exe, then restart terminal.
-    echo.
-    pause
-    exit /b 1
-)
-for /f "tokens=*" %%V in ('rustc --version 2^>nul') do echo   [OK] %%V
-
-:: ── Install npm deps ──
+:: ── Install deps ──
 if not exist "node_modules" (
-    echo.
-    echo   [*] Installing npm dependencies...
+    echo   [*] Installing dependencies...
     call npm install
     if %errorlevel% neq 0 (
         echo   [!] npm install failed.
         pause
         exit /b 1
     )
+    echo.
 )
 
-:: ── Install Python deps ──
-where python >nul 2>&1
-if %errorlevel% equ 0 (
-    if exist "engine\requirements.txt" (
-        echo   [*] Checking Python dependencies...
-        pip install -q -r engine\requirements.txt >nul 2>&1
-    )
-)
-
-:: ── Launch Tauri desktop app ──
+:: ── Launch ──
+echo   [*] Starting on http://localhost:1420
+echo   [*] Opening browser in 3 seconds...
+echo   [*] Press Ctrl+C to stop
 echo.
-echo   [*] Launching PPNFlow desktop app...
-echo       First build takes a few minutes (compiling Rust).
-echo       Subsequent starts are fast.
-echo.
-call npm run tauri dev
+start "" cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:1420"
+call npx vite --port 1420
 pause
 goto :eof
 
@@ -62,7 +42,6 @@ if %errorlevel% equ 0 (
     for /f "tokens=*" %%V in ('node --version 2^>nul') do echo   [OK] Node.js %%V
     exit /b 0
 )
-:: Try common install paths
 for %%P in (
     "C:\Program Files\nodejs"
     "%LOCALAPPDATA%\Programs\nodejs"
@@ -74,7 +53,6 @@ for %%P in (
         exit /b 0
     )
 )
-:: Try nvm
 if exist "%APPDATA%\nvm\nvm.exe" (
     for /f "tokens=*" %%V in ('"%APPDATA%\nvm\nvm.exe" current 2^>nul') do (
         if exist "%APPDATA%\nvm\v%%V\node.exe" (
@@ -89,11 +67,8 @@ exit /b 1
 :NO_NODE
 echo.
 echo   [!] Node.js not found.
-echo.
-echo       Please install Node.js v20+:
-echo         https://nodejs.org/
-echo.
-echo       After installing, close and reopen this terminal.
+echo       Install from: https://nodejs.org/
+echo       Then close and reopen terminal.
 echo.
 pause
 exit /b 1
