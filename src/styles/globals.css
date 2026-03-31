@@ -268,7 +268,7 @@ body {
   inset: 0;
   background: rgba(45, 31, 42, 0.15);
   backdrop-filter: blur(2px);
-  z-index: 40;
+  z-index: 0;
 }
 
 /* ── Add node button ──────────────────────────────────────────── */
