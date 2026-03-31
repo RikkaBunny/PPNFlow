@@ -1,6 +1,9 @@
+import { useState, useEffect, useCallback } from "react";
 import { type Node } from "@xyflow/react";
-import { X, Trash2, Copy } from "lucide-react";
-import type { FlowNodeData, ConfigField } from "@/types/node";
+import { X, Trash2, Copy, Download, Check, Loader2, CircleAlert } from "lucide-react";
+import type { FlowNodeData, ConfigField, SelectOption } from "@/types/node";
+import { isTauri } from "@/lib/tauriApi";
+import { wsSend, isWsConnected } from "@/lib/wsEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import { useManifestStore } from "@/stores/manifestStore";
 import { getCategoryStyle, getNodeIcon } from "@/lib/nodeColors";
@@ -131,11 +134,19 @@ function FieldInput({ field, value, onChange }: {
   };
 
   if (field.type === "select") {
+    const opts = field.options ?? [];
+    const hasRichOptions = opts.length > 0 && typeof opts[0] === "object";
+
+    if (hasRichOptions) {
+      return <PackageSelect field={field} value={value} onChange={onChange} />;
+    }
+
+    // Simple string options
     return (
       <div className="relative">
         <select className={base + " appearance-none cursor-pointer pr-8"} style={style}
           value={String(value)} onChange={(e) => onChange(e.target.value)}>
-          {(field.options ?? []).map((o) => (
+          {(opts as string[]).map((o) => (
             <option key={o} value={o}>{o}</option>
           ))}
         </select>
@@ -186,4 +197,152 @@ function FieldInput({ field, value, onChange }: {
   return <input type="text" className={base} style={style}
     value={String(value)} placeholder={field.placeholder ?? ""}
     onChange={(e) => onChange(e.target.value)} />;
+}
+
+
+/* ── Package-aware Select ──────────────────────────────────────── */
+
+async function checkPackages(packages: string[]): Promise<Record<string, boolean>> {
+  if (isTauri()) {
+    const { engineApi } = await import("@/lib/tauriApi");
+    const res = await engineApi.sendCommand("check_packages", { packages }) as { result?: { installed: Record<string, boolean> } };
+    return res?.result?.installed ?? {};
+  }
+  if (isWsConnected()) {
+    const res = await wsSend("check_packages", { packages }) as { installed: Record<string, boolean> };
+    return res?.installed ?? {};
+  }
+  return {};
+}
+
+async function installPackage(pkg: string): Promise<boolean> {
+  if (isTauri()) {
+    const { engineApi } = await import("@/lib/tauriApi");
+    const res = await engineApi.sendCommand("install_package", { package: pkg }) as { result?: { success: boolean } };
+    return res?.result?.success ?? false;
+  }
+  if (isWsConnected()) {
+    const res = await wsSend("install_package", { package: pkg }) as { success: boolean };
+    return res?.success ?? false;
+  }
+  return false;
+}
+
+function PackageSelect({ field, value, onChange }: {
+  field: ConfigField;
+  value: unknown;
+  onChange: (v: unknown) => void;
+}) {
+  const options = (field.options ?? []) as SelectOption[];
+  const [installed, setInstalled] = useState<Record<string, boolean | "loading">>({});
+  const [installing, setInstalling] = useState<string | null>(null);
+
+  // Check install status on mount
+  useEffect(() => {
+    const pkgs = options.filter((o) => o.package).map((o) => o.package!);
+    if (pkgs.length === 0) return;
+    checkPackages(pkgs).then((result) => {
+      setInstalled(result);
+    }).catch(() => {
+      // Engine not connected, assume unknown
+    });
+  }, []);
+
+  const handleInstall = useCallback(async (pkg: string) => {
+    setInstalling(pkg);
+    setInstalled((prev) => ({ ...prev, [pkg]: "loading" }));
+    try {
+      const ok = await installPackage(pkg);
+      setInstalled((prev) => ({ ...prev, [pkg]: ok }));
+    } catch {
+      setInstalled((prev) => ({ ...prev, [pkg]: false }));
+    }
+    setInstalling(null);
+  }, []);
+
+  return (
+    <div className="space-y-1.5">
+      {options.map((opt) => {
+        const isSelected = String(value) === opt.value;
+        const pkg = opt.package;
+        const status = pkg ? installed[pkg] : true; // no package = always available
+        const isInstalled = status === true;
+        const isLoading = status === "loading";
+        const isUnknown = status === undefined;
+
+        return (
+          <div
+            key={opt.value}
+            className="flex items-center gap-2 rounded-xl px-3 py-2 cursor-pointer transition-all"
+            style={{
+              background: isSelected ? "var(--color-accent)" + "12" : "var(--color-canvas)",
+              border: `1.5px solid ${isSelected ? "var(--color-accent)" + "40" : "var(--color-border-light)"}`,
+            }}
+            onClick={() => {
+              if (isInstalled || isUnknown || !pkg) onChange(opt.value);
+            }}
+          >
+            {/* Radio dot */}
+            <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+              style={{ borderColor: isSelected ? "var(--color-accent)" : "var(--color-border)" }}>
+              {isSelected && (
+                <div className="w-2 h-2 rounded-full" style={{ background: "var(--color-accent)" }} />
+              )}
+            </div>
+
+            {/* Label */}
+            <div className="flex-1 min-w-0">
+              <div className="text-[12px] font-medium" style={{ color: "var(--color-text)" }}>
+                {opt.label}
+              </div>
+              {pkg && (
+                <div className="text-[9px] font-mono mt-0.5" style={{ color: "var(--color-text-muted)" }}>
+                  {pkg}
+                </div>
+              )}
+            </div>
+
+            {/* Install status / button */}
+            {pkg && (
+              <>
+                {isInstalled && (
+                  <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{ color: "var(--color-success)", background: "rgba(46,204,113,0.1)" }}>
+                    <Check size={9} />
+                  </span>
+                )}
+                {isLoading && (
+                  <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{ color: "var(--color-running)", background: "rgba(52,152,219,0.1)" }}>
+                    <Loader2 size={10} className="animate-spin" />
+                  </span>
+                )}
+                {status === false && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleInstall(pkg); }}
+                    className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-lg transition-colors"
+                    style={{
+                      color: "var(--color-accent)",
+                      background: "var(--color-accent)" + "10",
+                      border: "1px solid var(--color-accent)" + "25",
+                    }}
+                    disabled={installing !== null}
+                  >
+                    <Download size={10} />
+                    Install
+                  </button>
+                )}
+                {isUnknown && !isLoading && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{ color: "var(--color-text-muted)", background: "var(--color-canvas)" }}>
+                    <CircleAlert size={10} />
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }

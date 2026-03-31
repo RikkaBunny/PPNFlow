@@ -7,6 +7,13 @@ export interface PortDef {
   default?: unknown;
 }
 
+/** Rich option for select fields — includes package dependency info */
+export interface SelectOption {
+  value: string;
+  label: string;
+  package?: string;  // pip package name — if set, UI shows install status
+}
+
 export interface ConfigField {
   name: string;
   type: "string" | "int" | "float" | "bool" | "select" | "password";
@@ -14,7 +21,7 @@ export interface ConfigField {
   default?: unknown;
   min?: number;
   max?: number;
-  options?: string[];
+  options?: string[] | SelectOption[];  // plain strings or rich objects
   multiline?: boolean;
   placeholder?: string;
 }

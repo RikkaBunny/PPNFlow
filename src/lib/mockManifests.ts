@@ -249,7 +249,13 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
       { name: "blocks", type: "JSON", label: "Blocks" },
     ],
     config_schema: [
-      { name: "engine", type: "select", label: "Engine", default: "rapidocr", options: ["rapidocr", "pytesseract", "easyocr", "winocr"] },
+      { name: "engine", type: "select", label: "OCR Engine", default: "rapidocr",
+        options: [
+          { value: "rapidocr", label: "RapidOCR (recommended)", package: "rapidocr_onnxruntime" },
+          { value: "pytesseract", label: "Tesseract", package: "pytesseract" },
+          { value: "easyocr", label: "EasyOCR", package: "easyocr" },
+          { value: "winocr", label: "Windows OCR", package: "winocr" },
+        ] },
       { name: "lang", type: "string", label: "Language", default: "" },
     ],
   },

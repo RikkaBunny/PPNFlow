@@ -114,12 +114,42 @@ async def handle_clear_cache(req_id, _params):
     _cache.clear()
     proto.send_result(req_id, {"cleared": True})
 
+async def handle_check_packages(req_id, params):
+    import importlib
+    packages = params.get("packages", [])
+    result = {}
+    for pkg in packages:
+        try:
+            importlib.import_module(pkg)
+            result[pkg] = True
+        except ImportError:
+            result[pkg] = False
+    proto.send_result(req_id, {"installed": result})
+
+async def handle_install_package(req_id, params):
+    import subprocess
+    pkg = params.get("package", "")
+    if not pkg:
+        proto.send_error(req_id, "Missing 'package' parameter")
+        return
+    proto.send_event("install_status", {"package": pkg, "status": "installing"})
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", pkg],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proto.send_event("install_status", {"package": pkg, "status": "done"})
+        proto.send_result(req_id, {"package": pkg, "success": True})
+    except subprocess.CalledProcessError as e:
+        proto.send_event("install_status", {"package": pkg, "status": "error"})
+        proto.send_result(req_id, {"package": pkg, "success": False, "error": str(e)})
+
 HANDLERS = {
     "ping": handle_ping,
     "get_node_schemas": handle_get_node_schemas,
     "execute_graph": handle_execute_graph,
     "stop_execution": handle_stop_execution,
     "clear_cache": handle_clear_cache,
+    "check_packages": handle_check_packages,
+    "install_package": handle_install_package,
 }
 
 
