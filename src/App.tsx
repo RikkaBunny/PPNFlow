@@ -12,12 +12,14 @@ import { PropertiesPanel } from "@/components/editor/PropertiesPanel";
 import { Toolbar } from "@/components/editor/Toolbar";
 import { ExecutionLog } from "@/components/editor/ExecutionLog";
 import { createFlowNode } from "@/components/editor/createFlowNode";
-
 import { TemplatePicker } from "@/components/editor/TemplatePicker";
+import { OutputDetailPanel } from "@/components/editor/OutputDetailPanel";
 
 import { useEngine } from "@/hooks/useEngine";
 import { useFlowStore } from "@/stores/flowStore";
+import { useManifestStore } from "@/stores/manifestStore";
 import type { FlowNodeData, NodeManifest } from "@/types/node";
+import { useExecution } from "@/hooks/useExecution";
 import { serializeGraph, deserializeGraph } from "@/lib/graphSerializer";
 import type { WorkflowFile } from "@/types/workflow";
 import type { TemplateInfo } from "@/lib/templates";
@@ -29,6 +31,9 @@ function AppInner() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [outputNodeId, setOutputNodeId] = useState<string | null>(null);
+  const [outputNodeType, setOutputNodeType] = useState<string | null>(null);
+  const { runToNode } = useExecution();
 
   const addNode = useFlowStore((s) => s.addNode);
   const nodes = useFlowStore((s) => s.nodes);
@@ -62,6 +67,25 @@ function AppInner() {
       setSelectedNode(null);
     },
     [nodes, edges, setNodes, setEdges]
+  );
+
+  const handleDuplicateNode = useCallback(
+    (id: string) => {
+      const original = nodes.find((n) => n.id === id);
+      if (!original) return;
+      const nd = original.data as Record<string, unknown>;
+      const nodeType = nd.nodeType as string;
+      const manifest = useManifestStore.getState().byType[nodeType];
+      if (!manifest) return;
+      const newNode = createFlowNode(manifest, {
+        x: original.position.x + 40,
+        y: original.position.y + 60,
+      });
+      // Copy config from original
+      newNode.data = { ...newNode.data, config: { ...(nd.config as Record<string, unknown>) } };
+      addNode(newNode);
+    },
+    [nodes, addNode]
   );
 
   const handleSelectNode = useCallback(
@@ -140,6 +164,14 @@ function AppInner() {
         <FlowEditor
           onSelectNode={handleSelectNode}
           onOpenPalette={() => setPaletteOpen(true)}
+          onRunToNode={runToNode}
+          onViewNodeOutput={(id, type) => { setOutputNodeId(id); setOutputNodeType(type); }}
+          onOpenNodeConfig={(id) => {
+            const n = nodes.find((n) => n.id === id);
+            if (n) setSelectedNode(n);
+          }}
+          onDeleteNode={handleDeleteNode}
+          onDuplicateNode={handleDuplicateNode}
         />
         <ExecutionLog />
       </div>
@@ -156,6 +188,13 @@ function AppInner() {
         node={selectedNode}
         onClose={() => setSelectedNode(null)}
         onDeleteNode={handleDeleteNode}
+      />
+
+      {/* Output Detail Panel */}
+      <OutputDetailPanel
+        nodeId={outputNodeId}
+        nodeType={outputNodeType}
+        onClose={() => { setOutputNodeId(null); setOutputNodeType(null); }}
       />
 
       {/* Template Picker */}

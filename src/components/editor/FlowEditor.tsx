@@ -30,14 +30,23 @@ import { useManifestStore } from "@/stores/manifestStore";
 import type { FlowNodeData } from "@/types/node";
 import { createFlowNode } from "./createFlowNode";
 import { ContextMenu, type ContextMenuState } from "./ContextMenu";
+import { NodeContextMenu, type NodeMenuState } from "./NodeContextMenu";
 import type { NodeManifest } from "@/types/node";
 
 interface Props {
   onSelectNode: (node: Node<FlowNodeData> | null) => void;
   onOpenPalette: () => void;
+  onRunToNode: (nodeId: string) => void;
+  onViewNodeOutput: (nodeId: string, nodeType: string) => void;
+  onOpenNodeConfig: (nodeId: string) => void;
+  onDeleteNode: (nodeId: string) => void;
+  onDuplicateNode: (nodeId: string) => void;
 }
 
-export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
+export function FlowEditor({
+  onSelectNode, onOpenPalette, onRunToNode, onViewNodeOutput,
+  onOpenNodeConfig, onDeleteNode, onDuplicateNode,
+}: Props) {
   const nodes = useFlowStore((s) => s.nodes);
   const edges = useFlowStore((s) => s.edges);
   const onNodesChange = useFlowStore((s) => s.onNodesChange);
@@ -50,6 +59,7 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
 
   const rfInstance = useRef<ReactFlowInstance<Node<FlowNodeData>> | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [nodeMenu, setNodeMenu] = useState<NodeMenuState | null>(null);
 
   // Sync execution state onto node data
   useEffect(() => {
@@ -64,6 +74,7 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
             ...n.data,
             status: state.status,
             errorMsg: state.errorMsg,
+            ms: state.ms,
             lastOutputs: state.outputs,
           },
         };
@@ -100,13 +111,14 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
   const onPaneClick = useCallback(
     (_e: React.MouseEvent) => {
       // Don't close selection if we just opened a context menu
-      if (contextMenu) {
+      if (contextMenu || nodeMenu) {
         setContextMenu(null);
+        setNodeMenu(null);
         return;
       }
       onSelectNode(null);
     },
-    [onSelectNode, contextMenu]
+    [onSelectNode, contextMenu, nodeMenu]
   );
 
   // ── Right-click context menu ──
@@ -264,7 +276,21 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
-        onNodeDoubleClick={(_, node) => onSelectNode(node)}
+        onNodeDoubleClick={(_, node) => {
+          const nd = node.data as Record<string, unknown>;
+          const nt = nd.nodeType as string;
+          onViewNodeOutput(node.id, nt);
+        }}
+        onNodeContextMenu={(e, node) => {
+          e.preventDefault();
+          const nd = node.data as Record<string, unknown>;
+          setNodeMenu({
+            nodeId: node.id,
+            nodeLabel: byType[nd.nodeType as string]?.label ?? (nd.label as string) ?? (nd.nodeType as string),
+            x: (e as unknown as MouseEvent).clientX ?? e.clientX,
+            y: (e as unknown as MouseEvent).clientY ?? e.clientY,
+          });
+        }}
         onPaneClick={onPaneClick}
         onPaneContextMenu={onContextMenu}
         onDragOver={onDragOver}
@@ -336,11 +362,29 @@ export function FlowEditor({ onSelectNode, onOpenPalette }: Props) {
         </button>
       </div>
 
-      {/* Right-click context menu */}
+      {/* Right-click context menu (canvas) */}
       <ContextMenu
         state={contextMenu}
         onClose={() => setContextMenu(null)}
         onAddNode={handleContextAdd}
+      />
+
+      {/* Right-click context menu (node) */}
+      <NodeContextMenu
+        state={nodeMenu}
+        onClose={() => setNodeMenu(null)}
+        onRunToHere={onRunToNode}
+        onViewOutput={(id) => {
+          const n = nodes.find((n) => n.id === id);
+          if (n) onViewNodeOutput(id, (n.data as Record<string, unknown>).nodeType as string);
+        }}
+        onOpenConfig={(id) => {
+          const n = nodes.find((n) => n.id === id);
+          if (n) onOpenNodeConfig(id);
+        }}
+        onDuplicate={onDuplicateNode}
+        onDelete={onDeleteNode}
+        hasOutput={nodeMenu ? !!nodeStates[nodeMenu.nodeId] : false}
       />
     </div>
   );
