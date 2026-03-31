@@ -242,15 +242,15 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
     ],
   },
   {
-    type: "ocr", label: "OCR (Text Recognition)", category: "Image", volatile: true,
+    type: "ocr", label: "OCR", category: "Image", volatile: true,
     inputs: [{ name: "image", type: "IMAGE", label: "Image" }],
     outputs: [
       { name: "text", type: "STRING", label: "Text" },
       { name: "blocks", type: "JSON", label: "Blocks" },
     ],
     config_schema: [
-      { name: "engine", type: "select", label: "Engine", default: "auto", options: ["auto", "pytesseract", "easyocr", "winocr"] },
-      { name: "lang", type: "string", label: "Language", default: "eng" },
+      { name: "engine", type: "select", label: "Engine", default: "rapidocr", options: ["rapidocr", "pytesseract", "easyocr", "winocr"] },
+      { name: "lang", type: "string", label: "Language", default: "" },
     ],
   },
 
