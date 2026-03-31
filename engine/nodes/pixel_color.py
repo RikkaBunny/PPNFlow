@@ -8,6 +8,7 @@ class PixelColorNode(BaseNode):
     label    = "Pixel Color"
     category = "Input"
     volatile = True
+    dependencies = {"mss": "mss", "Pillow": "PIL"}
 
     inputs  = [
         {"name": "x",     "type": "INT",   "label": "X", "optional": True},

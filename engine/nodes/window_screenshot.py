@@ -13,6 +13,7 @@ class WindowScreenshotNode(BaseNode):
     label    = "Window Screenshot"
     category = "Input"
     volatile = True
+    dependencies = {"mss": "mss", "Pillow": "PIL"}
 
     inputs  = [
         {"name": "title", "type": "STRING", "label": "Window Title", "optional": True},

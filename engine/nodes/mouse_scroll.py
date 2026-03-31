@@ -8,6 +8,7 @@ class MouseScrollNode(BaseNode):
     label    = "Mouse Scroll"
     category = "Automation"
     volatile = True
+    dependencies = {"pyautogui": "pyautogui"}
 
     inputs  = [
         {"name": "x", "type": "INT", "label": "X", "optional": True},
@@ -40,6 +41,7 @@ class MouseDragNode(BaseNode):
     label    = "Mouse Drag"
     category = "Automation"
     volatile = True
+    dependencies = {"pyautogui": "pyautogui"}
 
     inputs  = [
         {"name": "start_x", "type": "INT", "label": "Start X", "optional": True},

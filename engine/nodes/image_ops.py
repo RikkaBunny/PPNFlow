@@ -9,6 +9,7 @@ class ImageCropNode(BaseNode):
     type     = "image_crop"
     label    = "Image Crop"
     category = "Image"
+    dependencies = {"Pillow": "PIL"}
 
     inputs  = [
         {"name": "image", "type": "IMAGE",  "label": "Image"},
@@ -63,6 +64,7 @@ class ImageResizeNode(BaseNode):
     type     = "image_resize"
     label    = "Image Resize"
     category = "Image"
+    dependencies = {"Pillow": "PIL"}
 
     inputs  = [{"name": "image", "type": "IMAGE", "label": "Image"}]
     outputs = [
@@ -101,6 +103,7 @@ class ImageMatchNode(BaseNode):
     label    = "Image Match"
     category = "Image"
     volatile = True
+    dependencies = {"opencv-python": "cv2"}
 
     inputs  = [
         {"name": "image",    "type": "IMAGE", "label": "Source Image"},

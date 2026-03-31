@@ -7,6 +7,7 @@ class KeyboardPressNode(BaseNode):
     label    = "Keyboard Press"
     category = "Automation"
     volatile = True
+    dependencies = {"pyautogui": "pyautogui"}
 
     inputs  = [{"name": "key", "type": "STRING", "label": "Key", "optional": True}]
     outputs = [{"name": "success", "type": "BOOL", "label": "Success"}]

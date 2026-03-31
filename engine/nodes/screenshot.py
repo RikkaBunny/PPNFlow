@@ -14,6 +14,7 @@ class ScreenshotNode(BaseNode):
     label    = "Screenshot"
     category = "Input"
     volatile = True  # never cache - always capture fresh
+    dependencies = {"mss": "mss", "Pillow": "PIL"}
 
     inputs  = []
     outputs = [

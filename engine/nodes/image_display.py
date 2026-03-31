@@ -12,6 +12,7 @@ class ImageDisplayNode(BaseNode):
     label    = "Image Display"
     category = "Output"
     volatile = True
+    dependencies = {"Pillow": "PIL"}
 
     inputs  = [{"name": "image", "type": "IMAGE", "label": "Image"}]
     outputs = []

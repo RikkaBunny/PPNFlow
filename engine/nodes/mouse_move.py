@@ -7,6 +7,7 @@ class MouseMoveNode(BaseNode):
     label    = "Mouse Move"
     category = "Automation"
     volatile = True
+    dependencies = {"pyautogui": "pyautogui"}
 
     inputs  = [
         {"name": "x", "type": "INT", "label": "X", "optional": True},

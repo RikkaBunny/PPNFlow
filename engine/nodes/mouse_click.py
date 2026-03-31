@@ -7,6 +7,7 @@ class MouseClickNode(BaseNode):
     label    = "Mouse Click"
     category = "Automation"
     volatile = True
+    dependencies = {"pyautogui": "pyautogui"}
 
     inputs  = [
         {"name": "x", "type": "INT",  "label": "X",      "optional": True},

@@ -116,6 +116,7 @@ async def execute_once(
         t0 = time.monotonic()
         try:
             instance = node_cls()
+            instance.ensure_dependencies()
             result = await instance.execute(inputs, config)
         except Exception as exc:
             elapsed = int((time.monotonic() - t0) * 1000)

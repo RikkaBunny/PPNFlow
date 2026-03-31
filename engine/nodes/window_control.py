@@ -8,6 +8,7 @@ class WindowFocusNode(BaseNode):
     label    = "Window Focus"
     category = "Automation"
     volatile = True
+    dependencies = {"PyGetWindow": "pygetwindow"}
 
     inputs  = [{"name": "title", "type": "STRING", "label": "Title", "optional": True}]
     outputs = [{"name": "success", "type": "BOOL", "label": "Success"}]
@@ -45,6 +46,7 @@ class WindowListNode(BaseNode):
     label    = "Window List"
     category = "Automation"
     volatile = True
+    dependencies = {"PyGetWindow": "pygetwindow"}
 
     inputs  = []
     outputs = [
