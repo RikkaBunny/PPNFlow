@@ -1,5 +1,6 @@
 # Core (required)
 Pillow>=10.0.0
+websockets>=12.0
 
 # Screen capture & automation
 mss>=9.0.1

@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
-import { engineApi, isTauri } from "@/lib/tauriApi";
+import { isTauri } from "@/lib/tauriApi";
+import { wsSend } from "@/lib/wsEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import { useExecutionStore } from "@/stores/executionStore";
 import { serializeGraph } from "@/lib/graphSerializer";
@@ -24,16 +25,23 @@ export function useExecution() {
     const id = crypto.randomUUID();
     execIdRef.current = id;
 
+    const graph = serializeGraph(nodes, edges, settings, name);
+
     if (isTauri()) {
-      const graph = serializeGraph(nodes, edges, settings, name);
+      const { engineApi } = await import("@/lib/tauriApi");
       await engineApi.executeGraph(graph, {
-        id,
-        mode: settings.run_mode,
-        loop_delay_ms: settings.loop_delay_ms,
+        id, mode: settings.run_mode, loop_delay_ms: settings.loop_delay_ms,
       });
     } else {
-      // Browser dev mode — mock execution
-      await mockExecute(nodes, edges, stopRef);
+      // Try WebSocket engine first, fallback to mock
+      try {
+        await wsSend("execute_graph", {
+          graph, id, mode: settings.run_mode, loop_delay_ms: settings.loop_delay_ms,
+        });
+      } catch {
+        console.log("[PPNFlow] Engine not connected, using mock execution");
+        await mockExecute(nodes, edges, stopRef);
+      }
     }
   }, [isRunning, clearAll, nodes, edges, settings, name]);
 
@@ -42,7 +50,7 @@ export function useExecution() {
     clearAll();
     stopRef.current = false;
 
-    // BFS backwards to find all ancestors
+    // BFS backwards
     const needed = new Set<string>();
     const queue = [targetNodeId];
     needed.add(targetNodeId);
@@ -55,25 +63,35 @@ export function useExecution() {
         }
       }
     }
-
     const subNodes = nodes.filter((n) => needed.has(n.id));
     const subEdges = edges.filter((e) => needed.has(e.source) && needed.has(e.target));
 
+    const id = crypto.randomUUID();
+    execIdRef.current = id;
+    const graph = serializeGraph(subNodes, subEdges, { ...settings, run_mode: "once" }, name);
+
     if (isTauri()) {
-      const id = crypto.randomUUID();
-      execIdRef.current = id;
-      const graph = serializeGraph(subNodes, subEdges, { ...settings, run_mode: "once" }, name);
+      const { engineApi } = await import("@/lib/tauriApi");
       await engineApi.executeGraph(graph, { id, mode: "once" });
     } else {
-      await mockExecute(subNodes, subEdges, stopRef);
+      try {
+        await wsSend("execute_graph", { graph, id, mode: "once" });
+      } catch {
+        await mockExecute(subNodes, subEdges, stopRef);
+      }
     }
   }, [isRunning, clearAll, nodes, edges, settings, name]);
 
   const stop = useCallback(async () => {
     stopRef.current = true;
     const id = execIdRef.current ?? currentExecutionId;
-    if (id && isTauri()) {
-      await engineApi.stopExecution(id);
+    if (id) {
+      if (isTauri()) {
+        const { engineApi } = await import("@/lib/tauriApi");
+        await engineApi.stopExecution(id);
+      } else {
+        try { await wsSend("stop_execution", { id }); } catch { /* ok */ }
+      }
     }
     useExecutionStore.getState().setRunning(false);
   }, [currentExecutionId]);

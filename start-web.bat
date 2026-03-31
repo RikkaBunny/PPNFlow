@@ -1,12 +1,11 @@
 @echo off
 chcp 65001 >nul 2>&1
-title PPNFlow (Web Preview)
+title PPNFlow
 cd /d "%~dp0"
 
 echo.
 echo   ╔═══════════════════════════════════════╗
-echo   ║     PPNFlow - Web Preview Mode        ║
-echo   ║     (No Rust/Tauri required)          ║
+echo   ║           PPNFlow Starting            ║
 echo   ╚═══════════════════════════════════════╝
 echo.
 
@@ -14,9 +13,9 @@ echo.
 call :FIND_NODE
 if %errorlevel% neq 0 goto :NO_NODE
 
-:: ── Install deps ──
+:: ── Install npm deps ──
 if not exist "node_modules" (
-    echo   [*] Installing dependencies...
+    echo   [*] Installing npm dependencies...
     call npm install
     if %errorlevel% neq 0 (
         echo   [!] npm install failed.
@@ -26,10 +25,27 @@ if not exist "node_modules" (
     echo.
 )
 
-:: ── Launch ──
-echo   [*] Starting on http://localhost:1420
-echo   [*] Opening browser in 3 seconds...
-echo   [*] Press Ctrl+C to stop
+:: ── Install Python deps ──
+where python >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [*] Checking Python dependencies...
+    pip install -q -r engine\requirements.txt >nul 2>&1
+    echo   [OK] Python deps ready
+) else (
+    echo   [!] Python not found — engine will not start.
+    echo       Mock execution will be used instead.
+)
+
+:: ── Start Python WebSocket engine in background ──
+where python >nul 2>&1
+if %errorlevel% equ 0 (
+    echo   [*] Starting Python engine on ws://localhost:9320
+    start "PPNFlow Engine" /min cmd /c "python engine/ws_server.py --port 9320"
+)
+
+:: ── Start Vite + open browser ──
+echo   [*] Starting frontend on http://localhost:1420
+echo   [*] Opening browser...
 echo.
 start "" cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:1420"
 call npx vite --port 1420
