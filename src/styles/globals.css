@@ -2,32 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── CSS Variables (White + Pink theme) ───────────────────────── */
+/* ── CSS Variables (Clean White + Pink accent) ────────────────── */
 
 :root {
-  --color-canvas: #f8f5f7;
-  --color-canvas-dot: #e8dfe5;
+  --color-canvas: #ffffff;
+  --color-canvas-dot: #f0e8ed;
   --color-surface: #ffffff;
-  --color-surface-hover: #fdf0f4;
+  --color-surface-hover: #fef5f8;
   --color-panel: #ffffff;
-  --color-panel-header: #fef7f9;
-  --color-border: #f0dce4;
-  --color-border-light: #f5e6ec;
-  --color-text: #2d1f2a;
-  --color-text-secondary: #7a6573;
-  --color-text-muted: #b8a3b0;
+  --color-panel-header: #fefafb;
+  --color-border: #eee4ea;
+  --color-border-light: #f4ecf0;
+  --color-text: #1a1225;
+  --color-text-secondary: #6b5a65;
+  --color-text-muted: #ad99a6;
   --color-accent: #e84393;
   --color-accent-hover: #d63384;
-  --color-accent-light: rgba(232, 67, 147, 0.08);
+  --color-accent-light: rgba(232, 67, 147, 0.06);
   --color-node-bg: #ffffff;
-  --color-node-border: #f0dce4;
-  --color-node-hover: #fef7f9;
-  --color-success: #2ecc71;
-  --color-error: #e74c3c;
-  --color-warning: #f39c12;
-  --color-running: #3498db;
-  --color-connection: #d4bfc8;
-  --color-connection-hover: #c9a1b2;
+  --color-node-border: #eee4ea;
+  --color-node-hover: #fef5f8;
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --color-running: #3b82f6;
+  --color-connection: #d1c4cc;
+  --color-connection-hover: #e84393;
 }
 
 /* ── Base ───────────────────────────────────────────────────────── */
