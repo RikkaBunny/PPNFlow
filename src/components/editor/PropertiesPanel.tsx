@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { type Node } from "@xyflow/react";
 import { X, Trash2, Copy, Download, Check, Loader2, CircleAlert } from "lucide-react";
-import type { FlowNodeData, ConfigField, SelectOption } from "@/types/node";
+import type { ConfigField, SelectOption } from "@/types/node";
 import { isTauri } from "@/lib/tauriApi";
 import { wsSend, isWsConnected } from "@/lib/wsEngine";
 import { useFlowStore } from "@/stores/flowStore";
@@ -10,18 +9,22 @@ import { getCategoryStyle, getNodeIcon } from "@/lib/nodeColors";
 import { NodeIcon } from "@/components/nodes/NodeIcon";
 
 interface Props {
-  node: Node<FlowNodeData> | null;
+  nodeId: string | null;
   onClose: () => void;
   onDeleteNode: (id: string) => void;
 }
 
-export function PropertiesPanel({ node, onClose, onDeleteNode }: Props) {
+export function PropertiesPanel({ nodeId, onClose, onDeleteNode }: Props) {
   const updateConfig = useFlowStore((s) => s.updateNodeConfig);
-  const manifest = useManifestStore((s) =>
-    node ? s.byType[(node.data as Record<string, unknown>).nodeType as string] : undefined
-  );
+  // Read the LIVE node from the store (not a stale snapshot)
+  const node = useFlowStore((s) => nodeId ? s.nodes.find((n) => n.id === nodeId) : null);
+  const manifest = useManifestStore((s) => {
+    if (!node) return undefined;
+    const nd = node.data as Record<string, unknown>;
+    return s.byType[nd.nodeType as string];
+  });
 
-  if (!node) return null;
+  if (!nodeId || !node) return null;
 
   const nodeData = node.data as Record<string, unknown>;
   const nodeType = nodeData.nodeType as string;
@@ -31,7 +34,7 @@ export function PropertiesPanel({ node, onClose, onDeleteNode }: Props) {
   const iconName = getNodeIcon(nodeType, manifest?.category);
 
   const handleChange = (name: string, value: unknown) => {
-    updateConfig(node.id, { [name]: value });
+    updateConfig(nodeId, { [name]: value });
   };
 
   return (
@@ -50,20 +53,20 @@ export function PropertiesPanel({ node, onClose, onDeleteNode }: Props) {
         <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
           <div className="flex items-center justify-between mb-3">
             <button onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors hover:bg-pink-50"
+              className="p-1.5 rounded-lg transition-colors hover-bg"
               style={{ color: "var(--color-text-muted)" }}>
               <X size={16} />
             </button>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => navigator.clipboard.writeText(node.id)}
-                className="p-1.5 rounded-lg transition-colors hover:bg-gray-100"
+                onClick={() => navigator.clipboard.writeText(nodeId)}
+                className="p-1.5 rounded-lg transition-colors hover-bg"
                 style={{ color: "var(--color-text-muted)" }}
                 title="Copy node ID">
                 <Copy size={14} />
               </button>
               <button
-                onClick={() => onDeleteNode(node.id)}
+                onClick={() => onDeleteNode(nodeId)}
                 className="p-1.5 rounded-lg transition-colors hover:bg-red-50 hover:text-red-500"
                 style={{ color: "var(--color-text-muted)" }}
                 title="Delete node">
@@ -114,7 +117,7 @@ export function PropertiesPanel({ node, onClose, onDeleteNode }: Props) {
         <div className="px-5 py-3 flex items-center justify-between"
           style={{ borderTop: "1px solid var(--color-border)" }}>
           <span className="text-[10px] font-mono truncate" style={{ color: "var(--color-text-muted)" }}>
-            {node.id.slice(0, 12)}...
+            {nodeId.slice(0, 12)}...
           </span>
           <span className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>{nodeType}</span>
         </div>
@@ -141,7 +144,6 @@ function FieldInput({ field, value, onChange }: {
       return <PackageSelect field={field} value={value} onChange={onChange} />;
     }
 
-    // Simple string options
     return (
       <div className="relative">
         <select className={base + " appearance-none cursor-pointer pr-8"} style={style}
@@ -237,16 +239,13 @@ function PackageSelect({ field, value, onChange }: {
   const [installed, setInstalled] = useState<Record<string, boolean | "loading">>({});
   const [installing, setInstalling] = useState<string | null>(null);
 
-  // Check install status on mount and when options change
   const optionKey = options.map((o) => o.package ?? "").join(",");
   useEffect(() => {
     const pkgs = options.filter((o) => o.package).map((o) => o.package!);
     if (pkgs.length === 0) return;
     checkPackages(pkgs).then((result) => {
       setInstalled(result);
-    }).catch(() => {
-      // Engine not connected, assume unknown
-    });
+    }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionKey]);
 
@@ -267,7 +266,7 @@ function PackageSelect({ field, value, onChange }: {
       {options.map((opt) => {
         const isSelected = String(value) === opt.value;
         const pkg = opt.package;
-        const status = pkg ? installed[pkg] : true; // no package = always available
+        const status = pkg ? installed[pkg] : true;
         const isInstalled = status === true;
         const isLoading = status === "loading";
         const isUnknown = status === undefined;
@@ -284,7 +283,6 @@ function PackageSelect({ field, value, onChange }: {
               if (isInstalled || isUnknown || !pkg) onChange(opt.value);
             }}
           >
-            {/* Radio dot */}
             <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
               style={{ borderColor: isSelected ? "var(--color-accent)" : "var(--color-border)" }}>
               {isSelected && (
@@ -292,7 +290,6 @@ function PackageSelect({ field, value, onChange }: {
               )}
             </div>
 
-            {/* Label + description */}
             <div className="flex-1 min-w-0">
               <div className="text-[12px] font-medium" style={{ color: "var(--color-text)" }}>
                 {opt.label}
@@ -304,18 +301,17 @@ function PackageSelect({ field, value, onChange }: {
               )}
             </div>
 
-            {/* Install status / button */}
             {pkg && (
               <>
                 {isInstalled && (
                   <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ color: "var(--color-success)", background: "rgba(46,204,113,0.1)" }}>
+                    style={{ color: "var(--color-success)", background: "rgba(16,185,129,0.1)" }}>
                     <Check size={9} />
                   </span>
                 )}
                 {isLoading && (
                   <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ color: "var(--color-running)", background: "rgba(52,152,219,0.1)" }}>
+                    style={{ color: "var(--color-running)", background: "rgba(59,130,246,0.1)" }}>
                     <Loader2 size={10} className="animate-spin" />
                   </span>
                 )}

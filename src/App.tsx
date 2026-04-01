@@ -27,7 +27,7 @@ import type { TemplateInfo } from "@/lib/templates";
 function AppInner() {
   useEngine();
 
-  const [selectedNode, setSelectedNode] = useState<Node<FlowNodeData> | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -64,7 +64,7 @@ function AppInner() {
     (id: string) => {
       setNodes(nodes.filter((n) => n.id !== id));
       setEdges(edges.filter((e) => e.source !== id && e.target !== id));
-      setSelectedNode(null);
+      setSelectedNodeId(null);
     },
     [nodes, edges, setNodes, setEdges]
   );
@@ -90,8 +90,7 @@ function AppInner() {
 
   const handleSelectNode = useCallback(
     (node: Node<FlowNodeData> | null) => {
-      setSelectedNode(node);
-      // Close palette when selecting a node
+      setSelectedNodeId(node?.id ?? null);
       if (node) setPaletteOpen(false);
     },
     []
@@ -117,7 +116,7 @@ function AppInner() {
       setEdges(ed);
       useFlowStore.getState().updateSettings(s);
       setName(template.workflow.name);
-      setSelectedNode(null);
+      setSelectedNodeId(null);
     },
     [setNodes, setEdges, setName]
   );
@@ -139,7 +138,7 @@ function AppInner() {
           setNodes(n);
           setEdges(ed);
           setName(workflow.name ?? "Untitled");
-          setSelectedNode(null);
+          setSelectedNodeId(null);
         } catch (err) {
           alert(`Failed to load workflow: ${err}`);
         }
@@ -166,10 +165,7 @@ function AppInner() {
           onOpenPalette={() => setPaletteOpen(true)}
           onRunToNode={runToNode}
           onViewNodeOutput={(id, type) => { setOutputNodeId(id); setOutputNodeType(type); }}
-          onOpenNodeConfig={(id) => {
-            const n = nodes.find((n) => n.id === id);
-            if (n) setSelectedNode(n);
-          }}
+          onOpenNodeConfig={(id) => setSelectedNodeId(id)}
           onDeleteNode={handleDeleteNode}
           onDuplicateNode={handleDuplicateNode}
         />
@@ -185,8 +181,8 @@ function AppInner() {
 
       {/* Overlay: Properties Panel */}
       <PropertiesPanel
-        node={selectedNode}
-        onClose={() => setSelectedNode(null)}
+        nodeId={selectedNodeId}
+        onClose={() => setSelectedNodeId(null)}
         onDeleteNode={handleDeleteNode}
       />
 
