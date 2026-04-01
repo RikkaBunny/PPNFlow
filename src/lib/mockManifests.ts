@@ -243,10 +243,18 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
   },
   {
     type: "ocr", label: "OCR", category: "Image", volatile: true,
-    inputs: [{ name: "image", type: "IMAGE", label: "Image" }],
+    inputs: [
+      { name: "image", type: "IMAGE", label: "Image" },
+      { name: "x", type: "INT", label: "X", optional: true },
+      { name: "y", type: "INT", label: "Y", optional: true },
+      { name: "w", type: "INT", label: "Width", optional: true },
+      { name: "h", type: "INT", label: "Height", optional: true },
+    ],
     outputs: [
       { name: "text", type: "STRING", label: "Text" },
       { name: "blocks", type: "JSON", label: "Blocks" },
+      { name: "confidence", type: "FLOAT", label: "Confidence" },
+      { name: "count", type: "INT", label: "Block Count" },
     ],
     config_schema: [
       { name: "engine", type: "select", label: "OCR Engine", default: "rapidocr",
@@ -257,6 +265,9 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
           { value: "winocr", label: "Windows OCR", package: "winocr" },
         ] },
       { name: "lang", type: "string", label: "Language", default: "" },
+      { name: "preprocess", type: "select", label: "Preprocessing", default: "none",
+        options: ["none", "grayscale", "binarize", "contrast"] },
+      { name: "crop_region", type: "bool", label: "Crop from Inputs", default: false },
     ],
   },
 
