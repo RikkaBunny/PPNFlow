@@ -13,6 +13,11 @@ echo.
 call :FIND_NODE
 if %errorlevel% neq 0 goto :NO_NODE
 
+:: ── Kill previous instances ──
+for /f "tokens=5" %%P in ('netstat -ano 2^>nul ^| findstr ":1420 " ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%P >nul 2>&1
+)
+
 :: ── Find Rust ──
 where rustc >nul 2>&1
 if %errorlevel% neq 0 (

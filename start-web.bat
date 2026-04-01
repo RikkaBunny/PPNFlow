@@ -13,6 +13,15 @@ echo.
 call :FIND_NODE
 if %errorlevel% neq 0 goto :NO_NODE
 
+:: ── Kill previous instances ──
+echo   [*] Cleaning up old processes...
+for /f "tokens=5" %%P in ('netstat -ano 2^>nul ^| findstr ":1420 " ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%P >nul 2>&1
+)
+for /f "tokens=5" %%P in ('netstat -ano 2^>nul ^| findstr ":9320 " ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%P >nul 2>&1
+)
+
 :: ── Install npm deps ──
 if not exist "node_modules" (
     echo   [*] Installing npm dependencies...
@@ -32,11 +41,10 @@ if %errorlevel% equ 0 (
     pip install -q -r engine\requirements.txt >nul 2>&1
     echo   [OK] Python deps ready
 ) else (
-    echo   [!] Python not found — engine will not start.
-    echo       Mock execution will be used instead.
+    echo   [!] Python not found - mock execution will be used.
 )
 
-:: ── Start Python WebSocket engine in background ──
+:: ── Start Python WebSocket engine ──
 where python >nul 2>&1
 if %errorlevel% equ 0 (
     echo   [*] Starting Python engine on ws://localhost:9320
@@ -49,6 +57,13 @@ echo   [*] Opening browser...
 echo.
 start "" cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:1420"
 call npx vite --port 1420
+
+:: ── Cleanup on exit ──
+echo.
+echo   [*] Shutting down...
+for /f "tokens=5" %%P in ('netstat -ano 2^>nul ^| findstr ":9320 " ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%P >nul 2>&1
+)
 pause
 goto :eof
 
@@ -84,7 +99,6 @@ exit /b 1
 echo.
 echo   [!] Node.js not found.
 echo       Install from: https://nodejs.org/
-echo       Then close and reopen terminal.
 echo.
 pause
 exit /b 1
