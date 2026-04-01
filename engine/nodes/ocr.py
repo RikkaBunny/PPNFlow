@@ -38,7 +38,7 @@ class OcrNode(BaseNode):
     label    = "OCR"
     category = "Image"
     volatile = True
-    dependencies = {"rapidocr": "rapidocr"}
+    dependencies = {"rapidocr": "rapidocr", "onnxruntime": "onnxruntime"}
 
     inputs  = [
         {"name": "image", "type": "IMAGE",  "label": "Image"},
