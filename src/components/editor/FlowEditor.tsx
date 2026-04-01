@@ -61,9 +61,21 @@ export function FlowEditor({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [nodeMenu, setNodeMenu] = useState<NodeMenuState | null>(null);
 
-  // Sync execution state onto node data
+  // Sync execution state onto node data (only update changed nodes)
+  const prevNodeStatesRef = useRef<Record<string, string>>({});
   useEffect(() => {
     if (Object.keys(nodeStates).length === 0) return;
+    // Check if anything actually changed
+    let hasChanges = false;
+    for (const [id, state] of Object.entries(nodeStates)) {
+      const key = `${state.status}:${state.ms}:${state.errorMsg}`;
+      if (prevNodeStatesRef.current[id] !== key) {
+        hasChanges = true;
+        prevNodeStatesRef.current[id] = key;
+      }
+    }
+    if (!hasChanges) return;
+
     setNodes(
       nodes.map((n) => {
         const state = nodeStates[n.id];

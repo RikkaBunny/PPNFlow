@@ -37,16 +37,18 @@ export function ContextMenu({ state, onClose, onAddNode }: Props) {
     }
   }, [state]);
 
-  // Close on click outside
+  // Close on click outside — use ref to avoid re-registering on onClose change
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     if (!state) return;
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as HTMLElement)) {
-        onClose();
+        onCloseRef.current();
       }
     };
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleEsc);
@@ -54,7 +56,7 @@ export function ContextMenu({ state, onClose, onAddNode }: Props) {
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleEsc);
     };
-  }, [state, onClose]);
+  }, [state]);
 
   if (!state) return null;
 

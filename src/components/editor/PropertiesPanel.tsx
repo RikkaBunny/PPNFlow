@@ -237,7 +237,8 @@ function PackageSelect({ field, value, onChange }: {
   const [installed, setInstalled] = useState<Record<string, boolean | "loading">>({});
   const [installing, setInstalling] = useState<string | null>(null);
 
-  // Check install status on mount
+  // Check install status on mount and when options change
+  const optionKey = options.map((o) => o.package ?? "").join(",");
   useEffect(() => {
     const pkgs = options.filter((o) => o.package).map((o) => o.package!);
     if (pkgs.length === 0) return;
@@ -246,7 +247,8 @@ function PackageSelect({ field, value, onChange }: {
     }).catch(() => {
       // Engine not connected, assume unknown
     });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optionKey]);
 
   const handleInstall = useCallback(async (pkg: string) => {
     setInstalling(pkg);

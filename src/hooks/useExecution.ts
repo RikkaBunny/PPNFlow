@@ -47,6 +47,10 @@ export function useExecution() {
 
   const runToNode = useCallback(async (targetNodeId: string) => {
     if (isRunning) return;
+    if (!nodes.find((n) => n.id === targetNodeId)) {
+      console.error("[PPNFlow] runToNode: node not found:", targetNodeId);
+      return;
+    }
     clearAll();
     stopRef.current = false;
 

@@ -1,3 +1,7 @@
+/**
+ * Execution log — bottom console bar.
+ * Tracks state changes incrementally to avoid duplicate entries.
+ */
 import { useState, useEffect, useRef } from "react";
 import { ChevronUp, ChevronDown, Trash2, Terminal } from "lucide-react";
 import { useExecutionStore } from "@/stores/executionStore";
@@ -19,20 +23,26 @@ export function ExecutionLog() {
   const [expanded, setExpanded] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevStatesRef = useRef<Record<string, string>>({});
   const isRunning = useExecutionStore((s) => s.isRunning);
   const nodeStates = useExecutionStore((s) => s.nodeStates);
   const loopIteration = useExecutionStore((s) => s.loopIteration);
 
+  // Only log NEW state transitions (avoid duplicates)
   useEffect(() => {
     const entries: LogEntry[] = [];
+    const prev = prevStatesRef.current;
     for (const [nodeId, state] of Object.entries(nodeStates)) {
+      const key = `${nodeId}:${state.status}`;
+      if (prev[nodeId] === key) continue; // already logged
+      prev[nodeId] = key;
       const short = nodeId.slice(0, 8);
       if (state.status === "running")
-        entries.push({ id: `${nodeId}-run`, time: now(), type: "info", message: `[${short}] Executing...` });
+        entries.push({ id: key, time: now(), type: "info", message: `[${short}] Executing...` });
       else if (state.status === "done")
-        entries.push({ id: `${nodeId}-done`, time: now(), type: "success", message: `[${short}] Done${state.ms ? ` (${state.ms}ms)` : ""}` });
+        entries.push({ id: key, time: now(), type: "success", message: `[${short}] Done${state.ms ? ` (${state.ms}ms)` : ""}` });
       else if (state.status === "error")
-        entries.push({ id: `${nodeId}-err`, time: now(), type: "error", message: `[${short}] ${state.errorMsg ?? "Error"}` });
+        entries.push({ id: key, time: now(), type: "error", message: `[${short}] ${state.errorMsg ?? "Error"}` });
     }
     if (entries.length > 0) setLogs((p) => [...p, ...entries].slice(-150));
   }, [nodeStates]);
@@ -41,6 +51,13 @@ export function ExecutionLog() {
     if (loopIteration > 0)
       setLogs((p) => [...p, { id: `loop-${loopIteration}`, time: now(), type: "info" as const, message: `── Loop #${loopIteration} ──` }].slice(-150));
   }, [loopIteration]);
+
+  // Clear tracking when execution resets
+  useEffect(() => {
+    if (!isRunning && Object.keys(nodeStates).length === 0) {
+      prevStatesRef.current = {};
+    }
+  }, [isRunning, nodeStates]);
 
   useEffect(() => {
     if (scrollRef.current && expanded) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -57,10 +74,14 @@ export function ExecutionLog() {
       background: "var(--color-panel)", borderTop: "1px solid var(--color-border)", zIndex: 4,
     }}>
       <button onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-2 transition-colors hover:bg-pink-50/50">
+        className="w-full flex items-center justify-between px-4 py-2 transition-colors"
+        style={{ color: "var(--color-text-muted)" }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
         <div className="flex items-center gap-2">
-          <Terminal size={13} style={{ color: "var(--color-text-muted)" }} />
-          <span className="text-[11px] font-medium" style={{ color: "var(--color-text-muted)" }}>Console</span>
+          <Terminal size={13} />
+          <span className="text-[11px] font-medium">Console</span>
           {isRunning && (
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "var(--color-running)" }} />
@@ -68,20 +89,17 @@ export function ExecutionLog() {
             </span>
           )}
           {logs.length > 0 && (
-            <span className="text-[10px] tabular-nums" style={{ color: "var(--color-text-muted)" }}>{logs.length}</span>
+            <span className="text-[10px] tabular-nums">{logs.length}</span>
           )}
         </div>
         <div className="flex items-center gap-1">
           {logs.length > 0 && (
-            <button onClick={(e) => { e.stopPropagation(); setLogs([]); }}
-              className="p-1 rounded transition-colors hover:bg-gray-100"
-              style={{ color: "var(--color-text-muted)" }}>
+            <button onClick={(e) => { e.stopPropagation(); setLogs([]); prevStatesRef.current = {}; }}
+              className="p-1 rounded transition-colors hover:bg-gray-100">
               <Trash2 size={11} />
             </button>
           )}
-          {expanded
-            ? <ChevronDown size={13} style={{ color: "var(--color-text-muted)" }} />
-            : <ChevronUp size={13} style={{ color: "var(--color-text-muted)" }} />}
+          {expanded ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
         </div>
       </button>
 

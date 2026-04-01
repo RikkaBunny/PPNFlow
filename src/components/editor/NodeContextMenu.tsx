@@ -26,20 +26,22 @@ export function NodeContextMenu({
   state, onClose, onRunToHere, onViewOutput, onOpenConfig, onDuplicate, onDelete, hasOutput,
 }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!state) return;
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as HTMLElement)) onClose();
+      if (menuRef.current && !menuRef.current.contains(e.target as HTMLElement)) onCloseRef.current();
     };
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
     document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleEsc);
     return () => {
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleEsc);
     };
-  }, [state, onClose]);
+  }, [state]);
 
   if (!state) return null;
 

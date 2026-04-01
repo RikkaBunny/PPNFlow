@@ -320,6 +320,12 @@ body {
 
 /* ── Port type badge styles ────────────────────────────────────── */
 
+/* ── Shared hover ─────────────────────────────────────────────── */
+
+.hover-bg:hover {
+  background: var(--color-surface-hover) !important;
+}
+
 .ppn-node .port-type-badge {
   font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
   font-size: 9px;
