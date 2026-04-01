@@ -150,11 +150,20 @@ export async function mockExecute(
     // Generate mock outputs
     const outputs = mockOutputs(nodeType, config);
 
-    // Set done with outputs
-    useExecutionStore.getState().setNodeStatus(nodeId, "done", { ms });
-    for (const [port, value] of Object.entries(outputs)) {
-      useExecutionStore.getState().setNodeOutput(nodeId, port, value);
-    }
+    // Set done with ALL outputs in one atomic update
+    const store2 = useExecutionStore.getState();
+    const prev = store2.nodeStates[nodeId] ?? { status: "idle", outputs: {} };
+    useExecutionStore.setState({
+      nodeStates: {
+        ...store2.nodeStates,
+        [nodeId]: {
+          ...prev,
+          status: "done",
+          ms,
+          outputs: { ...prev.outputs, ...outputs },
+        },
+      },
+    });
   }
 
   useExecutionStore.getState().setRunning(false);
