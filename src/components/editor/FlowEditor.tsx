@@ -37,7 +37,7 @@ interface Props {
   onSelectNode: (node: Node<FlowNodeData> | null) => void;
   onOpenPalette: () => void;
   onRunToNode: (nodeId: string) => void;
-  onViewNodeOutput: (nodeId: string, nodeType: string) => void;
+  onViewNodeOutput: (nodeId: string) => void;
   onOpenNodeConfig: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
   onDuplicateNode: (nodeId: string) => void;
@@ -289,9 +289,7 @@ export function FlowEditor({
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={(_, node) => {
-          const nd = node.data as Record<string, unknown>;
-          const nt = nd.nodeType as string;
-          onViewNodeOutput(node.id, nt);
+          onViewNodeOutput(node.id);
         }}
         onNodeContextMenu={(e, node) => {
           e.preventDefault();
@@ -386,14 +384,8 @@ export function FlowEditor({
         state={nodeMenu}
         onClose={() => setNodeMenu(null)}
         onRunToHere={onRunToNode}
-        onViewOutput={(id) => {
-          const n = nodes.find((n) => n.id === id);
-          if (n) onViewNodeOutput(id, (n.data as Record<string, unknown>).nodeType as string);
-        }}
-        onOpenConfig={(id) => {
-          const n = nodes.find((n) => n.id === id);
-          if (n) onOpenNodeConfig(id);
-        }}
+        onViewOutput={(id) => onViewNodeOutput(id)}
+        onOpenConfig={(id) => onOpenNodeConfig(id)}
         onDuplicate={onDuplicateNode}
         onDelete={onDeleteNode}
         hasOutput={nodeMenu ? !!nodeStates[nodeMenu.nodeId] : false}

@@ -2,18 +2,18 @@
  * PPNFlow App — n8n-inspired layout.
  * Full-screen canvas with overlay panels for node palette and properties.
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Node } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
+import { on } from "@/lib/events";
 
 import { FlowEditor } from "@/components/editor/FlowEditor";
 import { NodePalette } from "@/components/editor/NodePalette";
-import { PropertiesPanel } from "@/components/editor/PropertiesPanel";
+import { NodeDetailPanel, type DetailPanelState } from "@/components/editor/NodeDetailPanel";
 import { Toolbar } from "@/components/editor/Toolbar";
 import { ExecutionLog } from "@/components/editor/ExecutionLog";
 import { createFlowNode } from "@/components/editor/createFlowNode";
 import { TemplatePicker } from "@/components/editor/TemplatePicker";
-import { OutputDetailPanel } from "@/components/editor/OutputDetailPanel";
 
 import { useEngine } from "@/hooks/useEngine";
 import { useFlowStore } from "@/stores/flowStore";
@@ -27,13 +27,25 @@ import type { TemplateInfo } from "@/lib/templates";
 function AppInner() {
   useEngine();
 
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [detailPanel, setDetailPanel] = useState<DetailPanelState | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
-  const [outputNodeId, setOutputNodeId] = useState<string | null>(null);
-  const [outputNodeType, setOutputNodeType] = useState<string | null>(null);
   const { runToNode } = useExecution();
+
+  // Listen for events from GenericNode (port clicks, error/output details)
+  useEffect(() => {
+    const unsub1 = on("port-click", (nodeId, portName) => {
+      setDetailPanel({ nodeId: nodeId as string, tab: "data", focusPort: portName as string });
+    });
+    const unsub2 = on("open-data", (nodeId) => {
+      setDetailPanel({ nodeId: nodeId as string, tab: "data" });
+    });
+    const unsub3 = on("open-error", (nodeId) => {
+      setDetailPanel({ nodeId: nodeId as string, tab: "error" });
+    });
+    return () => { unsub1(); unsub2(); unsub3(); };
+  }, []);
 
   const addNode = useFlowStore((s) => s.addNode);
   const nodes = useFlowStore((s) => s.nodes);
@@ -64,7 +76,7 @@ function AppInner() {
     (id: string) => {
       setNodes(nodes.filter((n) => n.id !== id));
       setEdges(edges.filter((e) => e.source !== id && e.target !== id));
-      setSelectedNodeId(null);
+      setDetailPanel(null);
     },
     [nodes, edges, setNodes, setEdges]
   );
@@ -90,8 +102,12 @@ function AppInner() {
 
   const handleSelectNode = useCallback(
     (node: Node<FlowNodeData> | null) => {
-      setSelectedNodeId(node?.id ?? null);
-      if (node) setPaletteOpen(false);
+      if (node) {
+        setDetailPanel({ nodeId: node.id, tab: "config" });
+        setPaletteOpen(false);
+      } else {
+        setDetailPanel(null);
+      }
     },
     []
   );
@@ -116,7 +132,7 @@ function AppInner() {
       setEdges(ed);
       useFlowStore.getState().updateSettings(s);
       setName(template.workflow.name);
-      setSelectedNodeId(null);
+      setDetailPanel(null);
     },
     [setNodes, setEdges, setName]
   );
@@ -138,7 +154,7 @@ function AppInner() {
           setNodes(n);
           setEdges(ed);
           setName(workflow.name ?? "Untitled");
-          setSelectedNodeId(null);
+          setDetailPanel(null);
         } catch (err) {
           alert(`Failed to load workflow: ${err}`);
         }
@@ -164,8 +180,8 @@ function AppInner() {
           onSelectNode={handleSelectNode}
           onOpenPalette={() => setPaletteOpen(true)}
           onRunToNode={runToNode}
-          onViewNodeOutput={(id, type) => { setOutputNodeId(id); setOutputNodeType(type); }}
-          onOpenNodeConfig={(id) => setSelectedNodeId(id)}
+          onViewNodeOutput={(id) => setDetailPanel({ nodeId: id, tab: "data" })}
+          onOpenNodeConfig={(id) => setDetailPanel({ nodeId: id, tab: "config" })}
           onDeleteNode={handleDeleteNode}
           onDuplicateNode={handleDuplicateNode}
         />
@@ -179,18 +195,11 @@ function AppInner() {
         onAddNode={handleAddNode}
       />
 
-      {/* Overlay: Properties Panel */}
-      <PropertiesPanel
-        nodeId={selectedNodeId}
-        onClose={() => setSelectedNodeId(null)}
+      {/* Unified Detail Panel */}
+      <NodeDetailPanel
+        state={detailPanel}
+        onClose={() => setDetailPanel(null)}
         onDeleteNode={handleDeleteNode}
-      />
-
-      {/* Output Detail Panel */}
-      <OutputDetailPanel
-        nodeId={outputNodeId}
-        nodeType={outputNodeType}
-        onClose={() => { setOutputNodeId(null); setOutputNodeType(null); }}
       />
 
       {/* Template Picker */}

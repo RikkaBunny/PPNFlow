@@ -3,6 +3,7 @@ import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { NodeIcon } from "./NodeIcon";
 import type { FlowNodeData, PortDef } from "@/types/node";
 import { useManifestStore } from "@/stores/manifestStore";
+import { emit } from "@/lib/events";
 import { useExecutionStore } from "@/stores/executionStore";
 import { getCategoryStyle, getNodeIcon, getPortColor } from "@/lib/nodeColors";
 import clsx from "clsx";
@@ -140,12 +141,13 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
                 <div key={i} className="flex items-center justify-between relative"
                   style={{ height: 26, paddingLeft: 10, paddingRight: 10 }}>
                   {inp ? (
-                    <div className="flex items-center gap-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-1 min-w-0 flex-1 cursor-pointer nopan"
+                      onClick={(e) => { e.stopPropagation(); emit("port-click", props.id, inp.name); }}>
                       <span className="text-[8px] font-bold font-mono uppercase px-1 py-px rounded flex-shrink-0"
                         style={{ color: getPortColor(inp.type), background: getPortColor(inp.type) + "18", letterSpacing: "0.03em" }}>
                         {typeShort(inp.type)}
                       </span>
-                      <span className="text-[10px] truncate" style={{ color: "var(--color-text-secondary)" }}>{inp.label}</span>
+                      <span className="text-[10px] truncate hover:underline" style={{ color: "var(--color-text-secondary)" }}>{inp.label}</span>
                       {inp.optional && <span className="text-[8px]" style={{ color: "var(--color-text-muted)" }}>?</span>}
                       <Handle type="target" position={Position.Left} id={inp.name} title={`${inp.label} (${inp.type})`}
                         style={{ position: "absolute", left: -5, top: "50%", transform: "translateY(-50%)",
@@ -154,8 +156,9 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
                     </div>
                   ) : <div className="flex-1" />}
                   {out ? (
-                    <div className="flex items-center gap-1 min-w-0 justify-end flex-1">
-                      <span className="text-[10px] truncate" style={{ color: "var(--color-text-secondary)" }}>{out.label}</span>
+                    <div className="flex items-center gap-1 min-w-0 justify-end flex-1 cursor-pointer nopan"
+                      onClick={(e) => { e.stopPropagation(); emit("port-click", props.id, out.name); }}>
+                      <span className="text-[10px] truncate hover:underline" style={{ color: "var(--color-text-secondary)" }}>{out.label}</span>
                       <span className="text-[8px] font-bold font-mono uppercase px-1 py-px rounded flex-shrink-0"
                         style={{ color: getPortColor(out.type), background: getPortColor(out.type) + "18", letterSpacing: "0.03em" }}>
                         {typeShort(out.type)}
@@ -183,7 +186,8 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
             border: "1px solid var(--color-border-light)",
             boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
           }}
-          title="Double-click to view details"
+          title="Click to view details"
+          onClick={(e) => { e.stopPropagation(); emit("open-data", props.id); }}
         >
           {outputSummary.map((o) => (
             <div key={o.key} className="flex items-start gap-1.5 py-0.5">
@@ -211,7 +215,8 @@ function GenericNodeInner(props: NodeProps<Node<FlowNodeData>>) {
             border: "1px solid rgba(231,76,60,0.15)",
             boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
           }}
-          title="Double-click to view details"
+          title="Click to view error details"
+          onClick={(e) => { e.stopPropagation(); emit("open-error", props.id); }}
         >
           <div className="flex items-start gap-1.5">
             <AlertTriangle size={10} className="flex-shrink-0 mt-0.5" style={{ color: "var(--color-error)" }} />
