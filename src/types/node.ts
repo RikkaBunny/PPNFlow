@@ -11,7 +11,8 @@ export interface PortDef {
 export interface SelectOption {
   value: string;
   label: string;
-  package?: string;  // pip package name — if set, UI shows install status
+  package?: string;      // pip package name — if set, UI shows install status
+  description?: string;  // short help text shown under the label
 }
 
 export interface ConfigField {

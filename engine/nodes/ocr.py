@@ -1,6 +1,8 @@
 """
 OCR node — extract text from an image.
-Supports multiple engines, user picks from dropdown, auto-installs on demand.
+
+Default engine: RapidOCR (pip install rapidocr, ~30MB, no binary needed)
+Supports: rapidocr, pytesseract, easyocr, winocr
 """
 from engine.base_node import BaseNode, register_node
 
@@ -11,6 +13,8 @@ class OcrNode(BaseNode):
     label    = "OCR"
     category = "Image"
     volatile = True
+    # Use the new unified rapidocr package (replaces rapidocr_onnxruntime)
+    dependencies = {"rapidocr": "rapidocr"}
 
     inputs  = [{"name": "image", "type": "IMAGE", "label": "Image"}]
     outputs = [
@@ -21,10 +25,18 @@ class OcrNode(BaseNode):
         {"name": "engine", "type": "select", "label": "OCR Engine",
          "default": "rapidocr",
          "options": [
-             {"value": "rapidocr",     "label": "RapidOCR (recommended)",  "package": "rapidocr_onnxruntime"},
-             {"value": "pytesseract",  "label": "Tesseract",               "package": "pytesseract"},
-             {"value": "easyocr",      "label": "EasyOCR",                 "package": "easyocr"},
-             {"value": "winocr",       "label": "Windows OCR",             "package": "winocr"},
+             {"value": "rapidocr",     "label": "RapidOCR (recommended)",
+              "package": "rapidocr",
+              "description": "~30MB, supports Chinese/English/Japanese/Korean, no binary needed"},
+             {"value": "pytesseract",  "label": "Tesseract OCR",
+              "package": "pytesseract",
+              "description": "Requires Tesseract binary: https://github.com/UB-Mannheim/tesseract/wiki"},
+             {"value": "easyocr",      "label": "EasyOCR",
+              "package": "easyocr",
+              "description": "Deep learning OCR, 80+ languages, ~200MB+PyTorch"},
+             {"value": "winocr",       "label": "Windows OCR",
+              "package": "winocr",
+              "description": "Windows 10+ built-in, free, fast, requires language packs"},
          ]},
         {"name": "lang", "type": "string", "label": "Language",
          "default": "", "placeholder": "auto / eng / chi_sim / jpn"},
@@ -50,31 +62,55 @@ class OcrNode(BaseNode):
             return self._run_winocr(image_path, lang or "en")
         raise RuntimeError(f"Unknown OCR engine: {engine}")
 
+    # ── RapidOCR (default) ───────────────────────────────────────
+    # https://github.com/RapidAI/RapidOCR
+    # pip install rapidocr
+
     def _run_rapidocr(self, path: str) -> dict:
-        from rapidocr_onnxruntime import RapidOCR
+        from rapidocr import RapidOCR
         ocr = RapidOCR()
-        result, _ = ocr(path)
-        if not result:
+        result = ocr(path)
+        if not result or not result.txts:
             return {"text": "", "blocks": []}
-        texts, blocks = [], []
-        for bbox, text, conf in result:
+        texts = []
+        blocks = []
+        for box, text, conf in zip(result.boxes, result.txts, result.scores):
             texts.append(text)
-            x = int(min(p[0] for p in bbox))
-            y = int(min(p[1] for p in bbox))
-            w = int(max(p[0] for p in bbox)) - x
-            h = int(max(p[1] for p in bbox)) - y
-            blocks.append({"text": text, "x": x, "y": y, "w": w, "h": h, "conf": round(conf, 4)})
+            x = int(min(p[0] for p in box))
+            y = int(min(p[1] for p in box))
+            w = int(max(p[0] for p in box)) - x
+            h = int(max(p[1] for p in box)) - y
+            blocks.append({"text": text, "x": x, "y": y, "w": w, "h": h,
+                           "conf": round(float(conf), 4)})
         return {"text": "\n".join(texts), "blocks": blocks}
 
+    # ── Tesseract ────────────────────────────────────────────────
+    # pip install pytesseract Pillow
+    # + Tesseract binary: https://github.com/UB-Mannheim/tesseract/wiki
+
     def _run_tesseract(self, path: str, lang: str) -> dict:
-        import pytesseract
-        from PIL import Image
+        try:
+            import pytesseract
+            from PIL import Image
+        except ImportError:
+            raise RuntimeError(
+                "Install: pip install pytesseract Pillow\n"
+                "Also need Tesseract binary:\n"
+                "  https://github.com/UB-Mannheim/tesseract/wiki"
+            )
         try:
             img = Image.open(path)
             text = pytesseract.image_to_string(img, lang=lang)
         except Exception as e:
             if "tesseract" in str(e).lower():
-                raise RuntimeError("Tesseract binary not found.\nDownload: https://github.com/UB-Mannheim/tesseract/wiki")
+                raise RuntimeError(
+                    "Tesseract binary not found.\n\n"
+                    "Download installer:\n"
+                    "  https://github.com/UB-Mannheim/tesseract/wiki\n\n"
+                    "After install, add to PATH or set:\n"
+                    "  pytesseract.pytesseract.tesseract_cmd = "
+                    "r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'"
+                )
             raise
         data = pytesseract.image_to_data(img, lang=lang, output_type=pytesseract.Output.DICT)
         blocks = [{"text": data["text"][i], "x": data["left"][i], "y": data["top"][i],
@@ -82,8 +118,15 @@ class OcrNode(BaseNode):
                   for i in range(len(data["text"])) if data["text"][i].strip()]
         return {"text": text.strip(), "blocks": blocks}
 
+    # ── EasyOCR ──────────────────────────────────────────────────
+    # pip install easyocr
+    # https://github.com/JaidedAI/EasyOCR
+
     def _run_easyocr(self, path: str, lang: str) -> dict:
-        import easyocr
+        try:
+            import easyocr
+        except ImportError:
+            raise RuntimeError("Install: pip install easyocr")
         langs = [l.strip() for l in lang.split(",")]
         reader = easyocr.Reader(langs, gpu=False)
         results = reader.readtext(path)
@@ -95,13 +138,42 @@ class OcrNode(BaseNode):
                            "conf": round(conf, 4)})
         return {"text": "\n".join(texts), "blocks": blocks}
 
+    # ── Windows OCR ──────────────────────────────────────────────
+    # pip install winocr
+    # https://github.com/GitHub30/winocr
+
     def _run_winocr(self, path: str, lang: str) -> dict:
-        import winocr, asyncio
-        lang_map = {"eng": "en", "chi_sim": "zh-Hans", "chi_tra": "zh-Hant", "jpn": "ja", "kor": "ko"}
-        result = asyncio.get_event_loop().run_until_complete(winocr.recognize_read(path, lang_map.get(lang, lang)))
+        try:
+            import winocr
+            import asyncio
+        except ImportError:
+            raise RuntimeError(
+                "Install: pip install winocr\n"
+                "Windows 10+ only.\n"
+                "Install language packs (PowerShell Admin):\n"
+                '  Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"'
+            )
+        lang_map = {"eng": "en", "chi_sim": "zh-Hans", "chi_tra": "zh-Hant",
+                     "jpn": "ja", "kor": "ko", "fra": "fr", "deu": "de"}
+        win_lang = lang_map.get(lang, lang)
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    result = pool.submit(
+                        lambda: asyncio.run(winocr.recognize_read(path, win_lang))
+                    ).result()
+            else:
+                result = loop.run_until_complete(winocr.recognize_read(path, win_lang))
+        except Exception as e:
+            raise RuntimeError(f"Windows OCR failed: {e}")
         lines = [l.text for l in result.lines]
-        blocks = [{"text": l.text, "x": l.x, "y": l.y, "w": l.w, "h": l.h, "conf": 1.0} for l in result.lines]
+        blocks = [{"text": l.text, "x": l.x, "y": l.y, "w": l.w, "h": l.h, "conf": 1.0}
+                  for l in result.lines]
         return {"text": "\n".join(lines), "blocks": blocks}
+
+    # ── Util ─────────────────────────────────────────────────────
 
     def _b64_to_file(self, b64: str) -> str:
         import base64, tempfile

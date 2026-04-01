@@ -7,13 +7,18 @@ mss>=9.0.1
 pyautogui>=0.9.54
 pygetwindow>=0.0.9
 
+# OCR (default engine, auto-installed on first use)
+# rapidocr>=3.0.0
+
 # AI providers
 openai>=1.0.0
 anthropic>=0.25.0
 
-# Image processing (optional - for image_match node)
-# opencv-python>=4.8.0
+# Optional OCR engines (install if you need them):
+#   pip install rapidocr         ← recommended, ~30MB, no binary
+#   pip install pytesseract      ← + Tesseract binary from https://github.com/UB-Mannheim/tesseract/wiki
+#   pip install easyocr           ← ~200MB + PyTorch, 80+ languages
+#   pip install winocr            ← Windows 10+ only, free, built-in
 
-# OCR (optional - install one or both)
-# pytesseract>=0.3.10
-# easyocr>=1.7.0
+# Optional image processing:
+#   pip install opencv-python     ← for Image Match (template matching)

@@ -290,14 +290,14 @@ function PackageSelect({ field, value, onChange }: {
               )}
             </div>
 
-            {/* Label */}
+            {/* Label + description */}
             <div className="flex-1 min-w-0">
               <div className="text-[12px] font-medium" style={{ color: "var(--color-text)" }}>
                 {opt.label}
               </div>
-              {pkg && (
-                <div className="text-[9px] font-mono mt-0.5" style={{ color: "var(--color-text-muted)" }}>
-                  {pkg}
+              {(opt.description || pkg) && (
+                <div className="text-[9px] mt-0.5 leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
+                  {opt.description || pkg}
                 </div>
               )}
             </div>

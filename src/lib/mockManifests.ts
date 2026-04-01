@@ -251,8 +251,8 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
     config_schema: [
       { name: "engine", type: "select", label: "OCR Engine", default: "rapidocr",
         options: [
-          { value: "rapidocr", label: "RapidOCR (recommended)", package: "rapidocr_onnxruntime" },
-          { value: "pytesseract", label: "Tesseract", package: "pytesseract" },
+          { value: "rapidocr", label: "RapidOCR (recommended)", package: "rapidocr" },
+          { value: "pytesseract", label: "Tesseract OCR", package: "pytesseract" },
           { value: "easyocr", label: "EasyOCR", package: "easyocr" },
           { value: "winocr", label: "Windows OCR", package: "winocr" },
         ] },
