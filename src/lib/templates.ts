@@ -14,24 +14,25 @@ export interface TemplateInfo {
 }
 
 export const TEMPLATES: TemplateInfo[] = [
-  // ── 1. AI 自动玩游戏 ──
+  // ── 1. Galgame AI ──
   {
-    id: "ai-game-bot",
-    name: "AI Game Bot",
-    description: "Screenshot → AI analyze → Mouse/Keyboard action loop",
+    id: "galgame-ai",
+    name: "Galgame AI",
+    description: "Screenshot → AI analyze → auto click to advance visual novel",
     icon: "Gamepad2",
     color: "#e84393",
     workflow: {
       version: "1.0",
       name: "AI Game Bot",
-      settings: { run_mode: "loop", loop_delay_ms: 500 },
+      settings: { run_mode: "loop", loop_delay_ms: 2000 },
       nodes: [
         { id: "n1", type: "window_screenshot", position: { x: 60, y: 160 },
-          config: { window_title: "Game" } },
+          config: { window_title: "Tricolour" } },
         { id: "n2", type: "ai_chat", position: { x: 360, y: 140 },
           config: {
-            provider: "openai", model: "gpt-4o",
-            system_prompt: "You are a game AI agent. Analyze the screenshot and decide the next action.\nRespond ONLY in JSON format:\n{\"action\": \"click\"|\"press\"|\"wait\", \"x\": 0, \"y\": 0, \"key\": \"\", \"reason\": \"\"}",
+            provider: "ollama", model: "minicpm-v",
+            base_url: "http://localhost:11434/v1",
+            system_prompt: "你是一个视觉小说游戏AI助手。分析游戏截图并决定下一步操作。\n\n规则：\n- 如果看到对话文本，点击屏幕中央推进对话\n- 如果看到选项/按钮，点击第一个选项\n- 如果看到标题画面或菜单，点击\"开始\"或\"继续\"按钮\n\n必须只返回JSON格式：\n{\"action\": \"click\", \"x\": 数字, \"y\": 数字, \"reason\": \"原因\"}",
             temperature: 0.3, max_tokens: 256,
           } },
         { id: "n3", type: "json_parse", position: { x: 660, y: 160 },
@@ -47,7 +48,7 @@ export const TEMPLATES: TemplateInfo[] = [
         { id: "n8", type: "log", position: { x: 900, y: 380 },
           config: { label: "ACTION" } },
         { id: "n9", type: "delay", position: { x: 1140, y: 320 },
-          config: { ms: 300 } },
+          config: { ms: 1000 } },
       ],
       edges: [
         { id: "e1", source: "n1", sourceHandle: "image",    target: "n2", targetHandle: "image" },

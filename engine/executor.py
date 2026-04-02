@@ -142,18 +142,34 @@ async def execute_once(
 
 
 def _send_previews(node_id: str, result: dict) -> None:
-    """Send small base64 previews for IMAGE outputs."""
+    """Send output values to the frontend for display in the Data tab."""
     for port_name, value in result.items():
         if value is None:
             continue
-        # If it's already a base64 string starting with data: send as-is
+        # Internal keys (e.g. _preview_image) — send as-is
+        if port_name.startswith("_"):
+            if isinstance(value, str) and len(value) < 500_000:
+                send_event("node_output", {
+                    "id": node_id, "port": port_name, "preview": value,
+                })
+            continue
+        # Base64 image data — send as-is
         if isinstance(value, str) and value.startswith("data:image"):
             send_event("node_output", {
-                "id": node_id,
-                "port": port_name,
-                "preview": value,
+                "id": node_id, "port": port_name, "preview": value,
             })
-        # File path strings: skip (frontend uses separate command to fetch)
+        # File paths (absolute or temp) — skip, frontend can't use them directly
+        elif isinstance(value, str) and (value.startswith("/tmp") or value.startswith("C:\\") or value.startswith("/var")):
+            continue
+        # All other values (strings, numbers, bools, dicts, lists) — send as preview
+        else:
+            preview = value
+            # Truncate very long strings
+            if isinstance(preview, str) and len(preview) > 10_000:
+                preview = preview[:10_000] + "...(truncated)"
+            send_event("node_output", {
+                "id": node_id, "port": port_name, "preview": preview,
+            })
 
 
 # ── Main entry points ─────────────────────────────────────────────────────────

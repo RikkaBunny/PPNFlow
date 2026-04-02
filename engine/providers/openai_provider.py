@@ -4,8 +4,9 @@ from engine.providers.base_provider import BaseProvider
 
 
 class OpenAIProvider(BaseProvider):
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, base_url: str | None = None) -> None:
         self._api_key = api_key
+        self._base_url = base_url
 
     async def chat(
         self,
@@ -15,7 +16,10 @@ class OpenAIProvider(BaseProvider):
         temperature: float = 0.7,
     ) -> str:
         from openai import AsyncOpenAI
-        client = AsyncOpenAI(api_key=self._api_key)
+        kwargs: dict = {"api_key": self._api_key}
+        if self._base_url:
+            kwargs["base_url"] = self._base_url
+        client = AsyncOpenAI(**kwargs)
         resp = await client.chat.completions.create(
             model=model,
             messages=messages,

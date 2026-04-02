@@ -30,6 +30,12 @@ def get_all_schemas() -> list[dict]:
     return [cls.get_schema() for cls in get_registry().values()]
 
 
+_loaded = False
+
 def get_node_class(node_type: str):
     """Look up a node class by type string. Returns None if not found."""
+    global _loaded
+    if not _loaded:
+        load_all_nodes()
+        _loaded = True
     return get_registry().get(node_type)

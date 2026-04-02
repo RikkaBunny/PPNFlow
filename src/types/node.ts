@@ -25,6 +25,8 @@ export interface ConfigField {
   options?: string[] | SelectOption[];  // plain strings or rich objects
   multiline?: boolean;
   placeholder?: string;
+  /** Show this field only when another field matches one of the given values */
+  visible_when?: { field: string; values: unknown[] };
 }
 
 export interface NodeManifest {

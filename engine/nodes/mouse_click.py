@@ -28,10 +28,20 @@ class MouseClickNode(BaseNode):
         except ImportError:
             return {"success": False}
 
-        x = int(inputs.get("x") or config.get("x", 0))
-        y = int(inputs.get("y") or config.get("y", 0))
+        x = int(float(inputs.get("x") or config.get("x", 0)))
+        y = int(float(inputs.get("y") or config.get("y", 0)))
         button = config.get("button", "left")
         clicks = int(config.get("clicks", 1))
 
-        pyautogui.click(x, y, button=button, clicks=clicks)
+        # Safety: skip if coordinates are at screen corners
+        if x <= 5 and y <= 5:
+            return {"success": False}
+
+        # Temporarily disable failsafe for automation
+        old_failsafe = pyautogui.FAILSAFE
+        pyautogui.FAILSAFE = False
+        try:
+            pyautogui.click(x, y, button=button, clicks=clicks)
+        finally:
+            pyautogui.FAILSAFE = old_failsafe
         return {"success": True}

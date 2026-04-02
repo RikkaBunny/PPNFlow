@@ -78,11 +78,18 @@ function ValueDisplay({ value, type }: { value: unknown; type: string }) {
 
   if (t === "IMAGE" || isBase64Image(value)) {
     if (isBase64Image(value)) {
+      const openFullSize = () => {
+        const w = window.open("", "_blank");
+        if (w) {
+          w.document.write(`<!DOCTYPE html><html><head><title>Image Preview</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#1a1a1a}</style></head><body><img src="${value}" style="max-width:100%;max-height:100vh;object-fit:contain" /></body></html>`);
+          w.document.close();
+        }
+      };
       return (
         <div>
           <img src={value} alt="output" className="w-full rounded-lg border cursor-pointer"
             style={{ borderColor: "var(--color-border)", maxHeight: 360 }}
-            onClick={() => window.open(value, "_blank")} />
+            onClick={openFullSize} />
           <span className="text-[9px] mt-1 block" style={{ color: "var(--color-text-muted)" }}>Click to open full size</span>
         </div>
       );
@@ -336,7 +343,13 @@ export function NodeDetailPanel({ state, onClose, onDeleteNode }: Props) {
                   No configuration.
                 </p>
               )}
-              {fields.map((field) => (
+              {fields
+                .filter((field) => {
+                  if (!field.visible_when) return true;
+                  const depValue = config[field.visible_when.field];
+                  return field.visible_when.values.includes(depValue);
+                })
+                .map((field) => (
                 <div key={field.name}>
                   <label className="block text-[10px] font-semibold mb-1.5 uppercase tracking-wide"
                     style={{ color: "var(--color-text-muted)" }}>
