@@ -3,7 +3,8 @@ import { isTauri } from "@/lib/tauriApi";
 import { wsSend } from "@/lib/wsEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import { useExecutionStore } from "@/stores/executionStore";
-import { serializeGraph } from "@/lib/graphSerializer";
+import { useNodeFunctionStore } from "@/stores/nodeFunctionStore";
+import { serializeGraph, expandNodeFunctions } from "@/lib/graphSerializer";
 import { mockExecute } from "@/lib/mockExecutor";
 
 export function useExecution() {
@@ -25,7 +26,9 @@ export function useExecution() {
     const id = crypto.randomUUID();
     execIdRef.current = id;
 
-    const graph = serializeGraph(nodes, edges, settings, name);
+    const defs = useNodeFunctionStore.getState().defs;
+    const rawGraph = serializeGraph(nodes, edges, settings, name, Object.values(defs));
+    const graph = expandNodeFunctions(rawGraph, defs);
 
     if (isTauri()) {
       const { engineApi } = await import("@/lib/tauriApi");
@@ -72,7 +75,9 @@ export function useExecution() {
 
     const id = crypto.randomUUID();
     execIdRef.current = id;
-    const graph = serializeGraph(subNodes, subEdges, { ...settings, run_mode: "once" }, name);
+    const defs = useNodeFunctionStore.getState().defs;
+    const rawGraph = serializeGraph(subNodes, subEdges, { ...settings, run_mode: "once" }, name, Object.values(defs));
+    const graph = expandNodeFunctions(rawGraph, defs);
 
     if (isTauri()) {
       const { engineApi } = await import("@/lib/tauriApi");

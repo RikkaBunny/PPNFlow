@@ -50,10 +50,10 @@ body {
 /* ── React Flow Overrides ──────────────────────────────────────── */
 
 .react-flow__pane {
-  cursor: grab !important;
+  cursor: default !important;
 }
 
-.react-flow__pane:active {
+.react-flow__pane.dragging {
   cursor: grabbing !important;
 }
 

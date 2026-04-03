@@ -13,6 +13,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  SelectionMode,
   type Node,
   type NodeMouseHandler,
   type IsValidConnection,
@@ -31,6 +32,12 @@ import type { FlowNodeData } from "@/types/node";
 import { createFlowNode } from "./createFlowNode";
 import { ContextMenu, type ContextMenuState } from "./ContextMenu";
 import { NodeContextMenu, type NodeMenuState } from "./NodeContextMenu";
+import { SelectionContextMenu, type SelectionMenuState } from "./SelectionContextMenu";
+import { NodeFunctionDialog } from "./NodeFunctionDialog";
+import { analyzeSelection, type FunctionAnalysis } from "@/lib/nodeFunctionAnalyzer";
+import { convertSelectionToFunction } from "@/lib/nodeFunctionConverter";
+import { useNodeFunctionStore } from "@/stores/nodeFunctionStore";
+import type { NodeFunctionDef } from "@/types/nodeFunction";
 import type { NodeManifest } from "@/types/node";
 
 interface Props {
@@ -60,6 +67,8 @@ export function FlowEditor({
   const rfInstance = useRef<ReactFlowInstance<Node<FlowNodeData>> | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [nodeMenu, setNodeMenu] = useState<NodeMenuState | null>(null);
+  const [selectionMenu, setSelectionMenu] = useState<SelectionMenuState | null>(null);
+  const [fnDialogAnalysis, setFnDialogAnalysis] = useState<FunctionAnalysis | null>(null);
 
   // Sync execution state onto node data (only update changed nodes)
   const prevNodeStatesRef = useRef<Record<string, string>>({});
@@ -123,14 +132,15 @@ export function FlowEditor({
   const onPaneClick = useCallback(
     (_e: React.MouseEvent) => {
       // Don't close selection if we just opened a context menu
-      if (contextMenu || nodeMenu) {
+      if (contextMenu || nodeMenu || selectionMenu) {
         setContextMenu(null);
         setNodeMenu(null);
+        setSelectionMenu(null);
         return;
       }
       onSelectNode(null);
     },
-    [onSelectNode, contextMenu, nodeMenu]
+    [onSelectNode, contextMenu, nodeMenu, selectionMenu]
   );
 
   // ── Right-click context menu ──
@@ -276,6 +286,57 @@ export function FlowEditor({
     [nodes, byType]
   );
 
+  // ── Multi-selection right-click ──
+  const onSelectionContextMenu = useCallback(
+    (e: React.MouseEvent, selectedNodes: Node[]) => {
+      e.preventDefault();
+      if (selectedNodes.length < 2) return;
+      setSelectionMenu({
+        nodeIds: selectedNodes.map((n) => n.id),
+        x: e.clientX,
+        y: e.clientY,
+      });
+    },
+    []
+  );
+
+  const handleDeleteSelected = useCallback(
+    (nodeIds: string[]) => {
+      const idSet = new Set(nodeIds);
+      useFlowStore.getState().pushHistory();
+      setNodes(nodes.filter((n) => !idSet.has(n.id)));
+      useFlowStore.getState().onEdgesChange(
+        edges
+          .filter((e) => idSet.has(e.source) || idSet.has(e.target))
+          .map((e) => ({ id: e.id, type: "remove" as const }))
+      );
+    },
+    [nodes, edges, setNodes]
+  );
+
+  const handleConvertToFunction = useCallback(
+    (nodeIds: string[]) => {
+      const analysis = analyzeSelection(nodeIds, nodes, edges, byType);
+      setFnDialogAnalysis(analysis);
+    },
+    [nodes, edges, byType]
+  );
+
+  const handleCreateFunction = useCallback(
+    (def: NodeFunctionDef) => {
+      if (!fnDialogAnalysis) return;
+      // Save def to store (also registers dynamic manifest)
+      useNodeFunctionStore.getState().addDef(def);
+      // Perform graph surgery
+      useFlowStore.getState().pushHistory();
+      const result = convertSelectionToFunction(fnDialogAnalysis, def, nodes, edges);
+      setNodes(result.nodes);
+      useFlowStore.getState().setEdges(result.edges);
+      setFnDialogAnalysis(null);
+    },
+    [fnDialogAnalysis, nodes, edges, setNodes]
+  );
+
   return (
     <div
       className="w-full h-full relative"
@@ -303,6 +364,10 @@ export function FlowEditor({
         }}
         onPaneClick={onPaneClick}
         onPaneContextMenu={onContextMenu}
+        onSelectionContextMenu={onSelectionContextMenu}
+        panOnDrag={[2]}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onInit={(instance) => {
@@ -390,6 +455,23 @@ export function FlowEditor({
         onDelete={onDeleteNode}
         hasOutput={nodeMenu ? !!nodeStates[nodeMenu.nodeId] : false}
       />
+
+      {/* Right-click context menu (multi-selection) */}
+      <SelectionContextMenu
+        state={selectionMenu}
+        onClose={() => setSelectionMenu(null)}
+        onDeleteSelected={handleDeleteSelected}
+        onConvertToFunction={handleConvertToFunction}
+      />
+
+      {/* Node Function creation dialog */}
+      {fnDialogAnalysis && (
+        <NodeFunctionDialog
+          analysis={fnDialogAnalysis}
+          onCancel={() => setFnDialogAnalysis(null)}
+          onCreate={handleCreateFunction}
+        />
+      )}
     </div>
   );
 }

@@ -211,7 +211,68 @@ export const TEMPLATES: TemplateInfo[] = [
     },
   },
 
-  // ── 6. 自动填表 ──
+  // ── 6. B站热门视频下载 (通用节点组合) ──
+  {
+    id: "bilibili-hot-download",
+    name: "Bilibili Hot Download",
+    description: "API → filter → map → download (generic composable nodes)",
+    icon: "Video",
+    color: "#00a1d6",
+    workflow: {
+      version: "1.0",
+      name: "Bilibili Hot Video Downloader",
+      settings: { run_mode: "once", loop_delay_ms: 0 },
+      nodes: [
+        { id: "n1", type: "http_request", position: { x: 60, y: 200 },
+          config: {
+            url: "https://api.bilibili.com/x/web-interface/popular?ps=50&pn=1",
+            method: "GET",
+            headers: JSON.stringify({
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              "Referer": "https://www.bilibili.com",
+            }),
+          } },
+        { id: "n2", type: "extract_field", position: { x: 340, y: 200 },
+          config: { path: "data.list" } },
+        { id: "n3", type: "list_filter", position: { x: 600, y: 200 },
+          config: {
+            expression: "item.get('duration', 0) <= 600",
+            limit: 10,
+            sort_by: "view",
+          } },
+        { id: "n4", type: "list_map", position: { x: 860, y: 120 },
+          config: {
+            fields: "title, duration, bvid",
+            url_template: "https://www.bilibili.com/video/{bvid}",
+            summary_template: "[{duration}s] {title}",
+          } },
+        { id: "n5", type: "text_display", position: { x: 1120, y: 60 },
+          config: {} },
+        { id: "n6", type: "video_download", position: { x: 860, y: 320 },
+          config: {
+            output_dir: "./bilibili_downloads",
+            quality: "best",
+            format: "mp4",
+            url_field: "url",
+          } },
+        { id: "n7", type: "log", position: { x: 1120, y: 260 },
+          config: { label: "DOWNLOADED" } },
+        { id: "n8", type: "text_display", position: { x: 1120, y: 400 },
+          config: {} },
+      ],
+      edges: [
+        { id: "e1", source: "n1", sourceHandle: "json_data",target: "n2", targetHandle: "data" },
+        { id: "e2", source: "n2", sourceHandle: "value",    target: "n3", targetHandle: "data" },
+        { id: "e3", source: "n3", sourceHandle: "result",   target: "n4", targetHandle: "data" },
+        { id: "e4", source: "n3", sourceHandle: "result",   target: "n6", targetHandle: "urls" },
+        { id: "e5", source: "n4", sourceHandle: "summary",  target: "n5", targetHandle: "text" },
+        { id: "e6", source: "n6", sourceHandle: "count",    target: "n7", targetHandle: "value" },
+        { id: "e7", source: "n6", sourceHandle: "output_dir",target: "n8",targetHandle: "text" },
+      ],
+    },
+  },
+
+  // ── 7. 自动填表 ──
   {
     id: "auto-form-fill",
     name: "Auto Form Filler",

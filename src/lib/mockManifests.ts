@@ -418,7 +418,70 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
     ],
   },
 
+  // ── Data — List Operations ──
+  {
+    type: "list_filter", label: "List Filter", category: "Data", volatile: false,
+    inputs: [
+      { name: "data", type: "JSON", label: "List" },
+    ],
+    outputs: [
+      { name: "result", type: "JSON", label: "Filtered" },
+      { name: "count", type: "INT", label: "Count" },
+    ],
+    config_schema: [
+      { name: "expression", type: "string", label: "Filter Expression", default: "True",
+        placeholder: "item.get('duration', 0) <= 600" },
+      { name: "limit", type: "int", label: "Max Items (0 = no limit)", default: 0, min: 0, max: 10000 },
+      { name: "sort_by", type: "string", label: "Sort By Field (desc)", default: "" },
+    ],
+  },
+  {
+    type: "list_map", label: "List Map", category: "Data", volatile: false,
+    inputs: [
+      { name: "data", type: "JSON", label: "List" },
+    ],
+    outputs: [
+      { name: "result", type: "JSON", label: "Mapped" },
+      { name: "count", type: "INT", label: "Count" },
+      { name: "first", type: "ANY", label: "First Item" },
+      { name: "summary", type: "STRING", label: "Summary" },
+    ],
+    config_schema: [
+      { name: "fields", type: "string", label: "Fields to Extract", default: "", multiline: true,
+        placeholder: "title, duration, url" },
+      { name: "url_template", type: "string", label: "URL Template", default: "",
+        placeholder: "https://www.bilibili.com/video/{bvid}" },
+      { name: "summary_template", type: "string", label: "Summary Line Template", default: "",
+        placeholder: "{title} ({duration}s)" },
+    ],
+  },
+
   // ── Network ──
+  {
+    type: "video_download", label: "Video Download", category: "Network", volatile: true,
+    inputs: [
+      { name: "url", type: "STRING", label: "URL", optional: true },
+      { name: "urls", type: "JSON", label: "URL List", optional: true },
+    ],
+    outputs: [
+      { name: "results", type: "JSON", label: "Results" },
+      { name: "count", type: "INT", label: "Downloaded" },
+      { name: "output_dir", type: "STRING", label: "Output Dir" },
+    ],
+    config_schema: [
+      { name: "output_dir", type: "string", label: "Output Directory", default: "./downloads" },
+      { name: "quality", type: "select", label: "Quality", default: "best",
+        options: [
+          { value: "best", label: "Best Quality" },
+          { value: "worst", label: "Lowest (fastest)" },
+          { value: "720p", label: "720p" },
+          { value: "480p", label: "480p" },
+        ] },
+      { name: "format", type: "select", label: "Format", default: "mp4",
+        options: ["mp4", "mkv", "flv"] },
+      { name: "url_field", type: "string", label: "URL Field Name", default: "url" },
+    ],
+  },
   {
     type: "http_request", label: "HTTP Request", category: "Network", volatile: true,
     inputs: [

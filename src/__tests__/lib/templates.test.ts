@@ -6,8 +6,8 @@ import { MOCK_MANIFESTS } from "@/lib/mockManifests";
 const manifestByType = new Map(MOCK_MANIFESTS.map((m) => [m.type, m]));
 
 describe("TEMPLATES", () => {
-  it("should contain 6 templates", () => {
-    expect(TEMPLATES.length).toBe(6);
+  it("should contain 7 templates", () => {
+    expect(TEMPLATES.length).toBe(7);
   });
 
   it("should have unique IDs", () => {
