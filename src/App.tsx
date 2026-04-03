@@ -21,6 +21,7 @@ import { useManifestStore } from "@/stores/manifestStore";
 import type { FlowNodeData, NodeManifest } from "@/types/node";
 import { useExecution } from "@/hooks/useExecution";
 import { serializeGraph, deserializeGraph } from "@/lib/graphSerializer";
+import { useNodeFunctionStore } from "@/stores/nodeFunctionStore";
 import type { WorkflowFile } from "@/types/workflow";
 import type { TemplateInfo } from "@/lib/templates";
 
@@ -113,7 +114,8 @@ function AppInner() {
   );
 
   const handleSave = useCallback(() => {
-    const workflow = serializeGraph(nodes, edges, settings, name);
+    const defs = Object.values(useNodeFunctionStore.getState().defs);
+    const workflow = serializeGraph(nodes, edges, settings, name, defs);
     const blob = new Blob([JSON.stringify(workflow, null, 2)], {
       type: "application/json",
     });
@@ -127,11 +129,12 @@ function AppInner() {
 
   const handleLoadTemplate = useCallback(
     (template: TemplateInfo) => {
-      const { nodes: n, edges: ed, settings: s } = deserializeGraph(template.workflow);
+      const { nodes: n, edges: ed, settings: s, nodeFunctions: nf } = deserializeGraph(template.workflow);
       setNodes(n);
       setEdges(ed);
       useFlowStore.getState().updateSettings(s);
       setName(template.workflow.name);
+      useNodeFunctionStore.getState().loadDefs(nf);
       setDetailPanel(null);
     },
     [setNodes, setEdges, setName]
@@ -150,10 +153,11 @@ function AppInner() {
           const workflow = JSON.parse(
             ev.target?.result as string
           ) as WorkflowFile;
-          const { nodes: n, edges: ed } = deserializeGraph(workflow);
+          const { nodes: n, edges: ed, nodeFunctions: nf } = deserializeGraph(workflow);
           setNodes(n);
           setEdges(ed);
           setName(workflow.name ?? "Untitled");
+          useNodeFunctionStore.getState().loadDefs(nf);
           setDetailPanel(null);
         } catch (err) {
           alert(`Failed to load workflow: ${err}`);

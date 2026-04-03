@@ -430,6 +430,110 @@ async def test_pipeline_math_chain():
     ok("60>50 is True", r["n4"]["result"] is True)
 
 
+async def test_list_filter():
+    """Test list_filter node — filter, sort, and limit arrays."""
+    print("\n[List Filter]")
+    data = [
+        {"name": "a", "score": 90, "duration": 300},
+        {"name": "b", "score": 40, "duration": 700},
+        {"name": "c", "score": 75, "duration": 120},
+        {"name": "d", "score": 60, "duration": 500},
+        {"name": "e", "score": 85, "duration": 200},
+    ]
+    r = await run_graph({
+        "nodes": [
+            {"id": "n1", "type": "text_input", "config": {"value": json.dumps(data)}},
+            {"id": "n2", "type": "json_parse", "config": {}},
+            {"id": "n3", "type": "list_filter", "config": {
+                "expression": "item.get('duration', 0) <= 600",
+                "limit": 3,
+                "sort_by": "score",
+            }},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "sourceHandle": "text",   "target": "n2", "targetHandle": "text"},
+            {"id": "e2", "source": "n2", "sourceHandle": "data",   "target": "n3", "targetHandle": "data"},
+        ],
+        "settings": {}
+    })
+    filtered = r["n3"]["result"]
+    ok("filtered out duration>600", all(item["duration"] <= 600 for item in filtered))
+    ok("limited to 3", len(filtered) == 3)
+    ok("sorted by score desc", filtered[0]["score"] >= filtered[1]["score"])
+    ok("count correct", r["n3"]["count"] == 3)
+
+
+async def test_list_map():
+    """Test list_map node — field extraction and URL template."""
+    print("\n[List Map]")
+    data = [
+        {"bvid": "BV123", "title": "Hello", "duration": 120, "extra": "ignore"},
+        {"bvid": "BV456", "title": "World", "duration": 300, "extra": "ignore"},
+    ]
+    r = await run_graph({
+        "nodes": [
+            {"id": "n1", "type": "text_input", "config": {"value": json.dumps(data)}},
+            {"id": "n2", "type": "json_parse", "config": {}},
+            {"id": "n3", "type": "list_map", "config": {
+                "fields": "title, duration",
+                "url_template": "https://www.bilibili.com/video/{bvid}",
+                "summary_template": "{title} ({duration}s)",
+            }},
+        ],
+        "edges": [
+            {"id": "e1", "source": "n1", "sourceHandle": "text",   "target": "n2", "targetHandle": "text"},
+            {"id": "e2", "source": "n2", "sourceHandle": "data",   "target": "n3", "targetHandle": "data"},
+        ],
+        "settings": {}
+    })
+    mapped = r["n3"]["result"]
+    ok("count", r["n3"]["count"] == 2)
+    ok("has title", mapped[0]["title"] == "Hello")
+    ok("has duration", mapped[0]["duration"] == 120)
+    ok("url generated", mapped[0]["url"] == "https://www.bilibili.com/video/BV123")
+    ok("extra excluded", "extra" not in mapped[0])
+    ok("summary has lines", "Hello (120s)" in r["n3"]["summary"])
+    ok("first item", r["n3"]["first"]["title"] == "Hello")
+
+
+async def test_video_download_schema():
+    """Test video_download node schema registration."""
+    print("\n[Video Download — Schema]")
+    cls = get_node_class("video_download")
+    ok("registered", cls is not None)
+    if cls is None:
+        return
+    schema = cls.get_schema()
+    ok("type", schema["type"] == "video_download")
+    ok("category Network", schema["category"] == "Network")
+    ok("volatile", schema["volatile"] is True)
+    input_names = [i["name"] for i in schema["inputs"]]
+    ok("input url", "url" in input_names)
+    ok("input urls", "urls" in input_names)
+    output_names = [o["name"] for o in schema["outputs"]]
+    ok("output results", "results" in output_names)
+    ok("output count", "count" in output_names)
+    ok("output output_dir", "output_dir" in output_names)
+
+
+async def test_generic_pipeline():
+    """Test list_filter → list_map pipeline compatibility."""
+    print("\n[Pipeline: List Filter → List Map]")
+    filter_cls = get_node_class("list_filter")
+    map_cls    = get_node_class("list_map")
+    dl_cls     = get_node_class("video_download")
+    ok("filter exists", filter_cls is not None)
+    ok("map exists", map_cls is not None)
+    ok("download exists", dl_cls is not None)
+    if not filter_cls or not map_cls or not dl_cls:
+        return
+    filter_out = {o["name"]: o["type"] for o in filter_cls.get_schema()["outputs"]}
+    map_in     = {i["name"]: i["type"] for i in map_cls.get_schema()["inputs"]}
+    dl_in      = {i["name"]: i["type"] for i in dl_cls.get_schema()["inputs"]}
+    ok("filter→map: JSON compatible", filter_out.get("result") == map_in.get("data"))
+    ok("filter→download: JSON compatible", filter_out.get("result") == dl_in.get("urls"))
+
+
 async def main():
     print("=" * 60)
     print("  PPNFlow Engine — Comprehensive Node Tests")
@@ -466,6 +570,12 @@ async def main():
     # Pipeline tests
     await test_pipeline_text_to_json_to_condition()
     await test_pipeline_math_chain()
+
+    # Generic list & download nodes
+    await test_list_filter()
+    await test_list_map()
+    await test_video_download_schema()
+    await test_generic_pipeline()
 
     # Summary
     print("\n" + "=" * 60)

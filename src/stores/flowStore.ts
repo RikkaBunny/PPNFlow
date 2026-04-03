@@ -40,6 +40,8 @@ interface FlowState {
   updateSettings: (settings: Partial<WorkflowSettings>) => void;
   setWorkflowName: (name: string) => void;
   resetGraph: () => void;
+  /** Save current state to undo history (call before batch mutations). */
+  pushHistory: () => void;
   undo: () => void;
   redo: () => void;
 }
@@ -107,6 +109,11 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   resetGraph: () => {
     const s = get();
     set({ ...pushHistory(s), nodes: [], edges: [] });
+  },
+
+  pushHistory: () => {
+    const s = get();
+    set(pushHistory(s));
   },
 
   undo: () => {

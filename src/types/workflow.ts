@@ -24,4 +24,6 @@ export interface WorkflowFile {
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
   settings: WorkflowSettings;
+  /** Node Function definitions (optional, backward-compatible) */
+  nodeFunctions?: import("./nodeFunction").NodeFunctionDef[];
 }

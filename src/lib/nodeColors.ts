@@ -75,6 +75,11 @@ const CATEGORY_STYLES: Record<string, CategoryStyle> = {
     bg: "rgba(127,140,141,0.1)",
     icon: "Terminal",
   },
+  "Node Function": {
+    color: "#9b59b6",
+    bg: "rgba(155,89,182,0.1)",
+    icon: "Boxes",
+  },
   Other: {
     color: "#7f8c8d",
     bg: "rgba(127,140,141,0.1)",
