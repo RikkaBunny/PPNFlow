@@ -66,6 +66,13 @@ def resolve_inputs(node: NodeDef, graph: GraphDef, outputs: dict[str, dict]) -> 
             continue
         src_outputs = outputs.get(edge.source, {})
         value = src_outputs.get(edge.source_handle)
+
+        # Skip bool values going to named ports that expect strings
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, str) and value in ("True", "False", "true", "false"):
+            continue
+
         resolved[edge.target_handle] = value
 
     return resolved
@@ -101,6 +108,10 @@ async def execute_once(
             raise RuntimeError(msg)
 
         inputs = resolve_inputs(node_def, graph, all_outputs)
+        # Inline safety: remove bool/"True"/"False" from string-type inputs
+        for k, v in list(inputs.items()):
+            if isinstance(v, bool) or (isinstance(v, str) and v in ("True", "False", "true", "false")):
+                del inputs[k]
         config = node_def.config
 
         # Cache check (skip for volatile nodes)
