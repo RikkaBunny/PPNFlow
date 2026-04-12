@@ -27,3 +27,7 @@ Thumbs.db
 
 # Temp files from screenshot node
 *.tmp
+
+# Local build and coverage output
+coverage/
+cargo-target-check*/

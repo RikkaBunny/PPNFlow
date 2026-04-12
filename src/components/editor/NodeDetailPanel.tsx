@@ -20,7 +20,6 @@ import {
   Settings, Zap, AlertTriangle, Clock, CheckCircle2, Database,
 } from "lucide-react";
 import type { ConfigField, SelectOption } from "@/types/node";
-import { isTauri } from "@/lib/tauriApi";
 import { wsSend, isWsConnected } from "@/lib/wsEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import { useExecutionStore } from "@/stores/executionStore";
@@ -509,12 +508,10 @@ function FieldInput({ field, value, onChange }: {
 // ── Package Select ──────────────────────────────────────────────
 
 async function checkPkgs(packages: string[]) {
-  if (isTauri()) { const { engineApi } = await import("@/lib/tauriApi"); const r = await engineApi.sendCommand("check_packages", { packages }) as any; return r?.result?.installed ?? {}; }
   if (isWsConnected()) { const r = await wsSend("check_packages", { packages }) as any; return r?.installed ?? {}; }
   return {};
 }
 async function installPkg(pkg: string) {
-  if (isTauri()) { const { engineApi } = await import("@/lib/tauriApi"); const r = await engineApi.sendCommand("install_package", { package: pkg }) as any; return r?.result?.success ?? false; }
   if (isWsConnected()) { const r = await wsSend("install_package", { package: pkg }) as any; return r?.success ?? false; }
   return false;
 }

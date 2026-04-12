@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Trash2, Copy, Download, Check, Loader2, CircleAlert } from "lucide-react";
 import type { ConfigField, SelectOption } from "@/types/node";
-import { isTauri } from "@/lib/tauriApi";
 import { wsSend, isWsConnected } from "@/lib/wsEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import { useManifestStore } from "@/stores/manifestStore";
@@ -205,11 +204,6 @@ function FieldInput({ field, value, onChange }: {
 /* ── Package-aware Select ──────────────────────────────────────── */
 
 async function checkPackages(packages: string[]): Promise<Record<string, boolean>> {
-  if (isTauri()) {
-    const { engineApi } = await import("@/lib/tauriApi");
-    const res = await engineApi.sendCommand("check_packages", { packages }) as { result?: { installed: Record<string, boolean> } };
-    return res?.result?.installed ?? {};
-  }
   if (isWsConnected()) {
     const res = await wsSend("check_packages", { packages }) as { installed: Record<string, boolean> };
     return res?.installed ?? {};
@@ -218,11 +212,6 @@ async function checkPackages(packages: string[]): Promise<Record<string, boolean
 }
 
 async function installPackage(pkg: string): Promise<boolean> {
-  if (isTauri()) {
-    const { engineApi } = await import("@/lib/tauriApi");
-    const res = await engineApi.sendCommand("install_package", { package: pkg }) as { result?: { success: boolean } };
-    return res?.result?.success ?? false;
-  }
   if (isWsConnected()) {
     const res = await wsSend("install_package", { package: pkg }) as { success: boolean };
     return res?.success ?? false;

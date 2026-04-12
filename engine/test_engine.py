@@ -32,10 +32,11 @@ def ok(name: str, condition: bool, detail: str = ""):
     global PASS, FAIL
     if condition:
         PASS += 1
-        print(f"  ✓ {name}")
+        print(f"  [PASS] {name}")
     else:
         FAIL += 1
-        print(f"  ✗ {name}  — {detail}")
+        suffix = f" - {detail}" if detail else ""
+        print(f"  [FAIL] {name}{suffix}")
 
 async def run_graph(graph_data: dict) -> dict[str, dict]:
     """Run a graph and return {node_id: outputs}."""
@@ -373,7 +374,7 @@ async def test_http_request():
         ok("has json", r["n1"]["json_data"] is not None)
     except Exception as e:
         # Network may not be available in CI/sandbox
-        print(f"  ⊘ skipped (network unavailable: {type(e).__name__})")
+        print(f"  [SKIP] network unavailable: {type(e).__name__}")
 
 
 async def test_run_command():
@@ -387,7 +388,7 @@ async def test_run_command():
 
 
 async def test_pipeline_text_to_json_to_condition():
-    print("\n[Pipeline: Text → JSON → Extract → Condition → Log]")
+    print("\n[Pipeline: Text -> JSON -> Extract -> Condition -> Log]")
     r = await run_graph({
         "nodes": [
             {"id": "n1", "type": "text_input", "config": {"value": '{"score": 85}'}},
@@ -410,7 +411,7 @@ async def test_pipeline_text_to_json_to_condition():
 
 
 async def test_pipeline_math_chain():
-    print("\n[Pipeline: Number → Math(+10) → Math(*2) → Compare(>50)]")
+    print("\n[Pipeline: Number -> Math(+10) -> Math(*2) -> Compare(>50)]")
     r = await run_graph({
         "nodes": [
             {"id": "n1", "type": "number_input", "config": {"value": 20}},
@@ -498,7 +499,7 @@ async def test_list_map():
 
 async def test_video_download_schema():
     """Test video_download node schema registration."""
-    print("\n[Video Download — Schema]")
+    print("\n[Video Download - Schema]")
     cls = get_node_class("video_download")
     ok("registered", cls is not None)
     if cls is None:
@@ -518,7 +519,7 @@ async def test_video_download_schema():
 
 async def test_generic_pipeline():
     """Test list_filter → list_map pipeline compatibility."""
-    print("\n[Pipeline: List Filter → List Map]")
+    print("\n[Pipeline: List Filter -> List Map]")
     filter_cls = get_node_class("list_filter")
     map_cls    = get_node_class("list_map")
     dl_cls     = get_node_class("video_download")
@@ -536,7 +537,7 @@ async def test_generic_pipeline():
 
 async def main():
     print("=" * 60)
-    print("  PPNFlow Engine — Comprehensive Node Tests")
+    print("  PPNFlow Engine - Comprehensive Node Tests")
     print("=" * 60)
 
     # Load all nodes
@@ -581,9 +582,9 @@ async def main():
     print("\n" + "=" * 60)
     total = PASS + FAIL
     if FAIL == 0:
-        print(f"  ALL {total} TESTS PASSED ✓")
+        print(f"  ALL {total} TESTS PASSED")
     else:
-        print(f"  {PASS}/{total} passed, {FAIL} FAILED ✗")
+        print(f"  {PASS}/{total} passed, {FAIL} FAILED")
     print("=" * 60)
 
     return FAIL == 0

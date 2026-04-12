@@ -1,5 +1,4 @@
 import { useCallback, useRef } from "react";
-import { isTauri } from "@/lib/tauriApi";
 import { wsSend } from "@/lib/wsEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import { useExecutionStore } from "@/stores/executionStore";
@@ -30,21 +29,14 @@ export function useExecution() {
     const rawGraph = serializeGraph(nodes, edges, settings, name, Object.values(defs));
     const graph = expandNodeFunctions(rawGraph, defs);
 
-    if (isTauri()) {
-      const { engineApi } = await import("@/lib/tauriApi");
-      await engineApi.executeGraph(graph, {
+    try {
+      await wsSend("execute_graph", {
+        graph,
         id, mode: settings.run_mode, loop_delay_ms: settings.loop_delay_ms,
       });
-    } else {
-      // Try WebSocket engine first, fallback to mock
-      try {
-        await wsSend("execute_graph", {
-          graph, id, mode: settings.run_mode, loop_delay_ms: settings.loop_delay_ms,
-        });
-      } catch {
-        console.log("[PPNFlow] Engine not connected, using mock execution");
-        await mockExecute(nodes, edges, stopRef);
-      }
+    } catch {
+      console.log("[PPNFlow] Engine not connected, using mock execution");
+      await mockExecute(nodes, edges, stopRef);
     }
   }, [isRunning, clearAll, nodes, edges, settings, name]);
 
@@ -79,15 +71,10 @@ export function useExecution() {
     const rawGraph = serializeGraph(subNodes, subEdges, { ...settings, run_mode: "once" }, name, Object.values(defs));
     const graph = expandNodeFunctions(rawGraph, defs);
 
-    if (isTauri()) {
-      const { engineApi } = await import("@/lib/tauriApi");
-      await engineApi.executeGraph(graph, { id, mode: "once" });
-    } else {
-      try {
-        await wsSend("execute_graph", { graph, id, mode: "once" });
-      } catch {
-        await mockExecute(subNodes, subEdges, stopRef);
-      }
+    try {
+      await wsSend("execute_graph", { graph, id, mode: "once" });
+    } catch {
+      await mockExecute(subNodes, subEdges, stopRef);
     }
   }, [isRunning, clearAll, nodes, edges, settings, name]);
 
@@ -95,12 +82,7 @@ export function useExecution() {
     stopRef.current = true;
     const id = execIdRef.current ?? currentExecutionId;
     if (id) {
-      if (isTauri()) {
-        const { engineApi } = await import("@/lib/tauriApi");
-        await engineApi.stopExecution(id);
-      } else {
-        try { await wsSend("stop_execution", { id }); } catch { /* ok */ }
-      }
+      try { await wsSend("stop_execution", { id }); } catch { /* ok */ }
     }
     useExecutionStore.getState().setRunning(false);
   }, [currentExecutionId]);

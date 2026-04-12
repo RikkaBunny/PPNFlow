@@ -198,6 +198,62 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
       { name: "filter", type: "string", label: "Filter", default: "" },
     ],
   },
+  {
+    type: "ww_ensure_main", label: "WW: Ensure Main", category: "Game", volatile: true,
+    inputs: [{ name: "trigger", type: "ANY", label: "Trigger", optional: true }],
+    outputs: [{ name: "success", type: "BOOL", label: "Success" }],
+    config_schema: [
+      { name: "window_title", type: "string", label: "Window Title", default: "Wuthering Waves" },
+      { name: "timeout", type: "int", label: "Timeout (s)", default: 30 },
+    ],
+  },
+  {
+    type: "ww_go_to_tower", label: "WW: Go to Tower", category: "Game", volatile: true,
+    inputs: [{ name: "trigger", type: "ANY", label: "Trigger", optional: true }],
+    outputs: [{ name: "success", type: "BOOL", label: "Success" }],
+    config_schema: [
+      { name: "window_title", type: "string", label: "Window Title", default: "Wuthering Waves" },
+    ],
+  },
+  {
+    type: "ww_open_daily", label: "WW: Open Daily", category: "Game", volatile: true,
+    inputs: [{ name: "trigger", type: "ANY", label: "Trigger", optional: true }],
+    outputs: [
+      { name: "stamina", type: "INT", label: "Stamina Used" },
+      { name: "points", type: "INT", label: "Daily Points" },
+      { name: "ready", type: "BOOL", label: "Reward Ready" },
+    ],
+    config_schema: [
+      { name: "window_title", type: "string", label: "Window Title", default: "Wuthering Waves" },
+    ],
+  },
+  {
+    type: "ww_claim_daily", label: "WW: Claim Daily", category: "Game", volatile: true,
+    inputs: [
+      { name: "trigger", type: "ANY", label: "Trigger", optional: true },
+      { name: "points", type: "INT", label: "Points", optional: true },
+    ],
+    outputs: [{ name: "success", type: "BOOL", label: "Success" }],
+    config_schema: [
+      { name: "window_title", type: "string", label: "Window Title", default: "Wuthering Waves" },
+    ],
+  },
+  {
+    type: "ww_claim_mail", label: "WW: Claim Mail", category: "Game", volatile: true,
+    inputs: [{ name: "trigger", type: "ANY", label: "Trigger", optional: true }],
+    outputs: [{ name: "success", type: "BOOL", label: "Success" }],
+    config_schema: [
+      { name: "window_title", type: "string", label: "Window Title", default: "Wuthering Waves" },
+    ],
+  },
+  {
+    type: "ww_claim_battle_pass", label: "WW: Claim Battle Pass", category: "Game", volatile: true,
+    inputs: [{ name: "trigger", type: "ANY", label: "Trigger", optional: true }],
+    outputs: [{ name: "success", type: "BOOL", label: "Success" }],
+    config_schema: [
+      { name: "window_title", type: "string", label: "Window Title", default: "Wuthering Waves" },
+    ],
+  },
 
   // ── Image ──
   {

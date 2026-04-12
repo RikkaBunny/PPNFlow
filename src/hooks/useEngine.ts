@@ -1,15 +1,13 @@
 import { useEffect, useRef, useCallback } from "react";
-import { engineApi, onEngineEvent, isTauri } from "@/lib/tauriApi";
-import { connectWsEngine } from "@/lib/wsEngine";
+import { connectWsEngine, wsSend } from "@/lib/wsEngine";
 import { useManifestStore } from "@/stores/manifestStore";
 import { useExecutionStore } from "@/stores/executionStore";
 import { MOCK_MANIFESTS } from "@/lib/mockManifests";
 
 /**
- * Manages the Python engine lifecycle.
- * - Tauri mode: uses Tauri IPC (stdin/stdout bridge)
- * - Browser mode: connects to Python engine via WebSocket (ws://localhost:9320)
- *   Falls back to mock manifests if WebSocket is unavailable.
+ * Manages the WebSocket connection to the Python engine.
+ * The frontend always talks to the backend via JSON messages over WebSocket.
+ * Falls back to mock manifests when the backend is unavailable.
  */
 export function useEngine() {
   const setManifests  = useManifestStore((s) => s.setManifests);
@@ -25,25 +23,16 @@ export function useEngine() {
       const d = evt.data as Record<string, unknown>;
       switch (evt.event) {
         case "engine_ready":
-          // Fetch real schemas from the engine
-          if (isTauri()) {
-            engineApi.getNodeSchemas().then((res) => {
-              const r = res as { result?: { schemas: unknown[] }; schemas?: unknown[] };
-              const schemas = r?.result?.schemas ?? (r as { schemas?: unknown[] })?.schemas ?? [];
-              setManifests(schemas as Parameters<typeof setManifests>[0]);
-            }).catch(console.error);
-          } else {
-            // WebSocket mode: request schemas
-            import("@/lib/wsEngine").then(({ wsSend }) => {
-              wsSend("get_node_schemas").then((res) => {
-                const r = res as { schemas?: unknown[] };
-                if (r?.schemas) setManifests(r.schemas as Parameters<typeof setManifests>[0]);
-              }).catch(() => {
-                // Fallback to mock manifests if engine can't respond
-                if (!loaded) setManifests(MOCK_MANIFESTS);
-              });
+          wsSend("get_node_schemas")
+            .then((res) => {
+              const r = res as { schemas?: unknown[] };
+              if (r?.schemas) {
+                setManifests(r.schemas as Parameters<typeof setManifests>[0]);
+              }
+            })
+            .catch(() => {
+              if (!loaded) setManifests(MOCK_MANIFESTS);
             });
-          }
           break;
 
         case "node_status":
@@ -84,32 +73,19 @@ export function useEngine() {
   );
 
   useEffect(() => {
-    if (isTauri()) {
-      // Tauri mode
-      onEngineEvent(handleEvent).then((unlisten) => {
-        unlistenRef.current = unlisten;
-      });
-      engineApi.start().catch(console.error);
-    } else {
-      // Browser mode: try WebSocket, fallback to mock manifests
-      const unlisten = connectWsEngine(handleEvent);
-      unlistenRef.current = unlisten;
+    const unlisten = connectWsEngine(handleEvent);
+    unlistenRef.current = unlisten;
 
-      // If no engine connects within 3s, load mock manifests
-      const fallbackTimer = setTimeout(() => {
-        if (!useManifestStore.getState().loaded) {
-          console.log("[PPNFlow] No engine connected, using mock manifests");
-          setManifests(MOCK_MANIFESTS);
-        }
-      }, 3000);
-
-      return () => {
-        clearTimeout(fallbackTimer);
-        unlisten();
-      };
-    }
+    // If no engine connects within 3s, load mock manifests
+    const fallbackTimer = setTimeout(() => {
+      if (!useManifestStore.getState().loaded) {
+        console.log("[PPNFlow] No engine connected, using mock manifests");
+        setManifests(MOCK_MANIFESTS);
+      }
+    }, 3000);
 
     return () => {
+      clearTimeout(fallbackTimer);
       unlistenRef.current?.();
     };
   }, [handleEvent, setManifests]);

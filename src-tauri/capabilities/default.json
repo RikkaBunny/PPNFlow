@@ -4,8 +4,6 @@
   "description": "Default capabilities for PPNFlow",
   "windows": ["main"],
   "permissions": [
-    "core:default",
-    "dialog:default",
-    "fs:default"
+    "core:default"
   ]
 }

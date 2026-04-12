@@ -30,6 +30,11 @@ const CATEGORY_STYLES: Record<string, CategoryStyle> = {
     bg: "rgba(41,128,185,0.1)",
     icon: "MousePointer2",
   },
+  Game: {
+    color: "#6c5ce7",
+    bg: "rgba(108,92,231,0.1)",
+    icon: "Gamepad2",
+  },
   "Control Flow": {
     color: "#e67e22",
     bg: "rgba(230,126,34,0.1)",
