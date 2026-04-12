@@ -98,6 +98,10 @@ int wgc_capture(HWND hwnd, uint8_t** out_buf, int* out_w, int* out_h, int* out_s
     try {
         ensure_d3d();
 
+        // WGC can't capture minimized windows (DWM freezes texture).
+        // Return -6 so caller can wait/retry instead of failing.
+        if (IsIconic(hwnd)) return -6;  // MINIMIZED
+
         auto item = create_capture_item(hwnd);
         auto size = item.Size();
         if (size.Width <= 0 || size.Height <= 0) return -3;

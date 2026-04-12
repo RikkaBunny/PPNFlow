@@ -53,25 +53,38 @@ def topological_sort(graph: GraphDef) -> list[str]:
 
 # ── Input resolution ──────────────────────────────────────────────────────────
 
+_ORDERING_SOURCES = frozenset({"success", "found", "value", "pass"})
+
 def resolve_inputs(node: NodeDef, graph: GraphDef, outputs: dict[str, dict]) -> dict:
     """
     Build the inputs dict for a node by following edges.
     outputs: {node_id: {port_name: value}}
+
+    Ordering edges (success→title, value→title, etc.) are detected and
+    skipped so they don't pollute functional inputs that already have a
+    config default.
     """
     resolved: dict[str, Any] = {}
 
-    # Collect edges that target this node
     for edge in graph.edges:
         if edge.target != node.id:
             continue
         src_outputs = outputs.get(edge.source, {})
         value = src_outputs.get(edge.source_handle)
 
-        # Skip bool values going to named ports that expect strings
+        # Always skip bool values (ordering signals)
         if isinstance(value, bool):
             continue
         if isinstance(value, str) and value in ("True", "False", "true", "false"):
             continue
+
+        # Detect ordering edges: if the source handle is a generic
+        # ordering output AND the target port already has a config value,
+        # this edge is just for execution sequencing — skip it.
+        if edge.source_handle in _ORDERING_SOURCES:
+            cfg_val = node.config.get(edge.target_handle) or node.config.get(f"window_{edge.target_handle}")
+            if cfg_val:
+                continue
 
         resolved[edge.target_handle] = value
 
@@ -80,6 +93,26 @@ def resolve_inputs(node: NodeDef, graph: GraphDef, outputs: dict[str, dict]) -> 
 
 # ── Single graph execution pass ───────────────────────────────────────────────
 
+def _find_downstream(node_id: str, handle: str, graph: GraphDef) -> set[str]:
+    """Find all nodes reachable from node_id via a specific output handle."""
+    # First, find direct targets of this handle
+    direct = set()
+    for edge in graph.edges:
+        if edge.source == node_id and edge.source_handle == handle:
+            direct.add(edge.target)
+
+    # BFS to find all downstream nodes
+    visited = set(direct)
+    queue = deque(direct)
+    while queue:
+        nid = queue.popleft()
+        for edge in graph.edges:
+            if edge.source == nid and edge.target not in visited:
+                visited.add(edge.target)
+                queue.append(edge.target)
+    return visited
+
+
 async def execute_once(
     graph: GraphDef,
     cache: ResultCache,
@@ -87,17 +120,24 @@ async def execute_once(
     execution_id: str,
 ) -> dict[str, dict]:
     """
-    Execute all nodes in topological order.
-    Returns {node_id: outputs_dict}.
+    Execute nodes in topological order with conditional branch support.
+    Condition nodes (type="condition") activate only one branch —
+    the other branch's downstream nodes are skipped.
     """
     order = topological_sort(graph)
     node_map = {n.id: n for n in graph.nodes}
     all_outputs: dict[str, dict] = {}
+    skipped: set[str] = set()
 
     for node_id in order:
         if stop_event.is_set():
             send_event("execution_stopped", {"execution_id": execution_id})
             return all_outputs
+
+        # Skip nodes on inactive conditional branches
+        if node_id in skipped:
+            send_event("node_status", {"id": node_id, "status": "skipped"})
+            continue
 
         node_def = node_map[node_id]
         node_cls = get_node_class(node_def.type)
@@ -108,10 +148,6 @@ async def execute_once(
             raise RuntimeError(msg)
 
         inputs = resolve_inputs(node_def, graph, all_outputs)
-        # Inline safety: remove bool/"True"/"False" from string-type inputs
-        for k, v in list(inputs.items()):
-            if isinstance(v, bool) or (isinstance(v, str) and v in ("True", "False", "true", "false")):
-                del inputs[k]
         config = node_def.config
 
         # Cache check (skip for volatile nodes)
@@ -144,6 +180,18 @@ async def execute_once(
         all_outputs[node_id] = result
         if not node_cls.volatile:
             cache.put(node_def.type, inputs, config, result)
+
+        # ── Conditional branch handling ──
+        # If this is a condition node, mark the inactive branch as skipped
+        if node_def.type == "condition" and result:
+            took_true = result.get("true_out") is not None
+            inactive = "false_out" if took_true else "true_out"
+            active = "true_out" if took_true else "false_out"
+            inactive_nodes = _find_downstream(node_id, inactive, graph)
+            active_nodes = _find_downstream(node_id, active, graph)
+            # Only skip nodes exclusive to the inactive branch
+            exclusive_inactive = inactive_nodes - active_nodes
+            skipped.update(exclusive_inactive)
 
         # Send completion + any previewable outputs
         send_event("node_status", {"id": node_id, "status": "done", "ms": elapsed})

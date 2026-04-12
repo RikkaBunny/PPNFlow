@@ -31,3 +31,12 @@ Thumbs.db
 # Local build and coverage output
 coverage/
 cargo-target-check*/
+
+# Local Codex workspace files
+.claude/settings.local.json
+.claude/worktrees/
+
+# Local game automation outputs
+current_game.png
+daily_result.txt
+daily_admin_log.txt

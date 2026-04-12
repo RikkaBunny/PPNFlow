@@ -104,10 +104,18 @@ class WindowScreenshotNode(BaseNode):
         h = ctypes.c_int()
         stride = ctypes.c_int()
 
-        ret = dll.wgc_capture(
-            ctypes.wintypes.HWND(hwnd),
-            ctypes.byref(buf), ctypes.byref(w), ctypes.byref(h), ctypes.byref(stride),
-        )
+        import time as _time
+
+        # Retry loop: wait for window to be un-minimized (code -6)
+        for attempt in range(60):  # up to 30 seconds
+            ret = dll.wgc_capture(
+                ctypes.wintypes.HWND(hwnd),
+                ctypes.byref(buf), ctypes.byref(w), ctypes.byref(h), ctypes.byref(stride),
+            )
+            if ret == -6:  # Window minimized — wait and retry
+                _time.sleep(0.5)
+                continue
+            break
 
         if ret != 0 or not buf.value:
             raise RuntimeError(f"WGC capture failed (code {ret})")
