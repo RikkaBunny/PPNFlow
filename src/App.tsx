@@ -18,6 +18,7 @@ import { TemplatePicker } from "@/components/editor/TemplatePicker";
 import { useEngine } from "@/hooks/useEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import { useManifestStore } from "@/stores/manifestStore";
+import { useExecutionStore } from "@/stores/executionStore";
 import type { FlowNodeData, NodeManifest } from "@/types/node";
 import { useExecution } from "@/hooks/useExecution";
 import { serializeGraph, deserializeGraph } from "@/lib/graphSerializer";
@@ -33,6 +34,8 @@ function AppInner() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const { runToNode } = useExecution();
+  const notice = useExecutionStore((s) => s.notice);
+  const clearNotice = useExecutionStore((s) => s.clearNotice);
 
   // Listen for events from GenericNode (port clicks, error/output details)
   useEffect(() => {
@@ -177,6 +180,49 @@ function AppInner() {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenTemplates={() => setTemplatesOpen(true)}
       />
+
+      {notice && (
+        <div
+          className="mx-4 mt-3 rounded-2xl border px-4 py-3 flex items-start gap-3"
+          style={{
+            background:
+              notice.kind === "error"
+                ? "rgba(220, 38, 38, 0.08)"
+                : notice.kind === "success"
+                  ? "rgba(22, 163, 74, 0.08)"
+                  : "rgba(59, 130, 246, 0.08)",
+            borderColor:
+              notice.kind === "error"
+                ? "rgba(220, 38, 38, 0.22)"
+                : notice.kind === "success"
+                  ? "rgba(22, 163, 74, 0.22)"
+                  : "rgba(59, 130, 246, 0.22)",
+            color: "var(--color-text)",
+          }}
+        >
+          <div
+            className="mt-1 h-2.5 w-2.5 rounded-full flex-shrink-0"
+            style={{
+              background:
+                notice.kind === "error"
+                  ? "#dc2626"
+                  : notice.kind === "success"
+                    ? "#16a34a"
+                    : "#2563eb",
+            }}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] leading-6">{notice.message}</p>
+          </div>
+          <button
+            onClick={clearNotice}
+            className="text-[12px] font-medium px-2 py-1 rounded-lg transition-colors hover:bg-white/40"
+            style={{ color: "var(--color-text-muted)" }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Canvas (full area) */}
       <div className="flex-1 relative overflow-hidden">

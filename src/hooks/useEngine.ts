@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { connectWsEngine, wsSend } from "@/lib/wsEngine";
 import { useManifestStore } from "@/stores/manifestStore";
 import { useExecutionStore } from "@/stores/executionStore";
+import { useFlowStore } from "@/stores/flowStore";
 import { MOCK_MANIFESTS } from "@/lib/mockManifests";
 
 /**
@@ -16,6 +17,7 @@ export function useEngine() {
   const setNodeOutput = useExecutionStore((s) => s.setNodeOutput);
   const setRunning    = useExecutionStore((s) => s.setRunning);
   const setLoopIter   = useExecutionStore((s) => s.setLoopIteration);
+  const setNotice     = useExecutionStore((s) => s.setNotice);
   const unlistenRef   = useRef<(() => void) | null>(null);
 
   const handleEvent = useCallback(
@@ -23,6 +25,7 @@ export function useEngine() {
       const d = evt.data as Record<string, unknown>;
       switch (evt.event) {
         case "engine_ready":
+          setNotice(null);
           wsSend("get_node_schemas")
             .then((res) => {
               const r = res as { schemas?: unknown[] };
@@ -48,6 +51,24 @@ export function useEngine() {
 
         case "node_output":
           setNodeOutput(d.id as string, d.port as string, d.preview);
+          {
+            const nodeId = d.id as string;
+            const port = d.port as string;
+            const preview = d.preview;
+            const node = useFlowStore.getState().nodes.find((item) => item.id === nodeId);
+            const nodeType = typeof node?.data?.nodeType === "string" ? node.data.nodeType : "";
+            const text = typeof preview === "string" ? preview : String(preview ?? "");
+            if (
+              nodeType === "ww_preflight" &&
+              port === "message" &&
+              /not ready|blocked|not found|needs admin|minimized/i.test(text)
+            ) {
+              setNotice({
+                kind: "error",
+                message: `Wuthering Waves preflight failed: ${text}`,
+              });
+            }
+          }
           break;
 
         case "node_error":
@@ -61,6 +82,9 @@ export function useEngine() {
         case "execution_done":
         case "execution_stopped":
         case "execution_error":
+          if (typeof d.error === "string" && d.error.trim()) {
+            setNotice({ kind: "error", message: d.error });
+          }
           setRunning(false);
           break;
 
@@ -69,7 +93,7 @@ export function useEngine() {
           break;
       }
     },
-    [setManifests, setNodeStatus, setNodeOutput, setRunning, setLoopIter, loaded]
+    [setManifests, setNodeStatus, setNodeOutput, setRunning, setLoopIter, loaded, setNotice]
   );
 
   useEffect(() => {
@@ -81,6 +105,10 @@ export function useEngine() {
       if (!useManifestStore.getState().loaded) {
         console.log("[PPNFlow] No engine connected, using mock manifests");
         setManifests(MOCK_MANIFESTS);
+        setNotice({
+          kind: "error",
+          message: "Python engine is not connected. PPNFlow is currently using mock mode, so nodes can render and simulate but desktop automation templates will not actually control external apps or games.",
+        });
       }
     }, 3000);
 

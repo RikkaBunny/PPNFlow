@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { wsSend } from "@/lib/wsEngine";
+import { isWsConnected, wsSend } from "@/lib/wsEngine";
 import { useFlowStore } from "@/stores/flowStore";
 import { useExecutionStore } from "@/stores/executionStore";
 import { useNodeFunctionStore } from "@/stores/nodeFunctionStore";
@@ -15,6 +15,7 @@ export function useExecution() {
   const isRunning          = useExecutionStore((s) => s.isRunning);
   const currentExecutionId = useExecutionStore((s) => s.currentExecutionId);
   const clearAll           = useExecutionStore((s) => s.clearAll);
+  const setNotice          = useExecutionStore((s) => s.setNotice);
   const execIdRef          = useRef<string | null>(null);
   const stopRef            = useRef(false);
 
@@ -22,6 +23,14 @@ export function useExecution() {
     if (isRunning) return;
     clearAll();
     stopRef.current = false;
+    if (!isWsConnected()) {
+      setNotice({
+        kind: "error",
+        message: "Python backend is not connected. The UI will fall back to mock execution, so desktop automation templates will not control the game. Start the backend on ws://localhost:9320 or use start-dev.bat.",
+      });
+    } else {
+      setNotice(null);
+    }
     const id = crypto.randomUUID();
     execIdRef.current = id;
 
@@ -38,7 +47,7 @@ export function useExecution() {
       console.log("[PPNFlow] Engine not connected, using mock execution");
       await mockExecute(nodes, edges, stopRef);
     }
-  }, [isRunning, clearAll, nodes, edges, settings, name]);
+  }, [isRunning, clearAll, nodes, edges, settings, name, setNotice]);
 
   const runToNode = useCallback(async (targetNodeId: string) => {
     if (isRunning) return;
@@ -48,6 +57,14 @@ export function useExecution() {
     }
     clearAll();
     stopRef.current = false;
+    if (!isWsConnected()) {
+      setNotice({
+        kind: "error",
+        message: "Python backend is not connected. Run-to-node is using mock execution only, so desktop automation nodes will not affect the game.",
+      });
+    } else {
+      setNotice(null);
+    }
 
     // BFS backwards
     const needed = new Set<string>();
@@ -76,7 +93,7 @@ export function useExecution() {
     } catch {
       await mockExecute(subNodes, subEdges, stopRef);
     }
-  }, [isRunning, clearAll, nodes, edges, settings, name]);
+  }, [isRunning, clearAll, nodes, edges, settings, name, setNotice]);
 
   const stop = useCallback(async () => {
     stopRef.current = true;

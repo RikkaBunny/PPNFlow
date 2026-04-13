@@ -13,6 +13,9 @@ echo.
 call :FIND_NODE
 if errorlevel 1 goto :NO_NODE
 
+call :FIND_PYTHON
+if errorlevel 1 goto :NO_PYTHON
+
 call :FIND_RUST
 if errorlevel 1 exit /b 1
 
@@ -30,16 +33,21 @@ if not exist "node_modules" (
     )
 )
 
-where python >nul 2>&1
-if %errorlevel% equ 0 (
-    if exist "engine\requirements.txt" (
-        echo [*] Checking Python dependencies...
-        pip install -q -r engine\requirements.txt >nul 2>&1
-    )
-    echo [*] Starting Python backend on ws://localhost:9320
-    start "PPNFlow Backend" /min cmd /c "cd /d \"%~dp0\" && python engine/ws_server.py --port 9320"
+if exist "engine\requirements.txt" (
+    echo [*] Checking Python dependencies with %PY_CMD%...
+    %PY_CMD% -m pip install -q -r engine\requirements.txt >nul 2>&1
+)
+
+echo [*] Starting Python backend on ws://localhost:9320 using %PY_CMD%
+start "PPNFlow Backend" /min %PY_CMD% engine/ws_server.py --port 9320
+call :WAIT_PORT 9320 10
+if errorlevel 1 (
+    echo [!] Python backend failed to start on ws://localhost:9320
+    echo     Try running this manually in an administrator terminal:
+    echo     %PY_CMD% engine\ws_server.py --port 9320
+    echo.
 ) else (
-    echo [!] Python not found. The desktop shell will start, but backend execution will be unavailable.
+    echo [OK] Python backend is listening on ws://localhost:9320
 )
 
 echo [*] Starting Tauri desktop shell...
@@ -54,11 +62,39 @@ call :KILL_PORT 9320
 pause
 exit /b 0
 
+:WAIT_PORT
+set "PORT=%~1"
+set "TRIES=%~2"
+if "%TRIES%"=="" set "TRIES=10"
+:WAIT_PORT_LOOP
+for /f "tokens=5" %%P in ('netstat -ano 2^>nul ^| findstr ":%PORT% " ^| findstr "LISTENING"') do (
+    exit /b 0
+)
+set /a TRIES-=1
+if %TRIES% LEQ 0 exit /b 1
+timeout /t 1 /nobreak >nul
+goto :WAIT_PORT_LOOP
+
 :KILL_PORT
 for /f "tokens=5" %%P in ('netstat -ano 2^>nul ^| findstr ":%~1 " ^| findstr "LISTENING"') do (
     taskkill /F /PID %%P >nul 2>&1
 )
 exit /b 0
+
+:FIND_PYTHON
+where py >nul 2>&1
+if %errorlevel% equ 0 (
+    set "PY_CMD=py"
+    for /f "tokens=*" %%V in ('py --version 2^>nul') do echo [OK] %%V
+    exit /b 0
+)
+where python >nul 2>&1
+if %errorlevel% equ 0 (
+    set "PY_CMD=python"
+    for /f "tokens=*" %%V in ('python --version 2^>nul') do echo [OK] %%V
+    exit /b 0
+)
+exit /b 1
 
 :FIND_RUST
 where rustc >nul 2>&1
@@ -108,6 +144,17 @@ echo     Install Node.js 20+ from:
 echo     https://nodejs.org/
 echo.
 echo     Then restart this terminal and run start-dev.bat again.
+echo.
+pause
+exit /b 1
+
+:NO_PYTHON
+echo.
+echo [!] Python not found.
+echo     Install Python 3 and make sure either `py` or `python` works in CMD.
+echo.
+echo     Example manual backend start:
+echo     py engine\ws_server.py --port 9320
 echo.
 pause
 exit /b 1

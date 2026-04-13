@@ -1,48 +1,69 @@
 """
-Window Screenshot — capture a specific window by title.
-Supports four capture methods:
-  - dxcam: DirectX capture via DXGI duplication, needs window visible
-  - wgc: Windows Graphics Capture via monitor + crop, no focus needed
-  - bitblt: Win32 BitBlt/PrintWindow, works with minimized GDI windows
-  - mss: screen region capture via mss library
+Window Screenshot - capture a specific window by title.
+
+Capture methods:
+- dxcam: DirectX capture, requires a visible foreground-able window
+- wgc: Windows Graphics Capture, supports background capture
+- bitblt: Win32 PrintWindow/BitBlt fallback
+- mss: region capture based on screen coordinates
 """
 import base64
 import io
+
 from engine.base_node import BaseNode, register_node
 
 
 @register_node
 class WindowScreenshotNode(BaseNode):
-    type     = "window_screenshot"
-    label    = "Window Screenshot"
+    type = "window_screenshot"
+    label = "Window Screenshot"
     category = "Input"
     volatile = True
     dependencies = {"mss": "mss", "Pillow": "PIL"}
 
-    inputs  = [
-        {"name": "title",   "type": "STRING", "label": "Window Title", "optional": True},
+    inputs = [
+        {"name": "title", "type": "STRING", "label": "Window Title", "optional": True},
     ]
     outputs = [
-        {"name": "image",    "type": "IMAGE",  "label": "Image"},
+        {"name": "image", "type": "IMAGE", "label": "Image"},
         {"name": "img_path", "type": "STRING", "label": "File Path"},
-        {"name": "width",    "type": "INT",    "label": "Width"},
-        {"name": "height",   "type": "INT",    "label": "Height"},
+        {"name": "width", "type": "INT", "label": "Width"},
+        {"name": "height", "type": "INT", "label": "Height"},
     ]
     config_schema = [
-        {"name": "window_title", "type": "string", "label": "Window Title",
-         "default": "", "placeholder": "e.g. Notepad, 鸣潮"},
-        {"name": "capture_method", "type": "select", "label": "Capture Method",
-         "default": "dxcam",
-         "options": [
-             {"value": "dxcam",  "label": "dxcam (DirectX, needs visible)"},
-             {"value": "wgc",   "label": "WGC (background, no focus)"},
-             {"value": "bitblt","label": "BitBlt (GDI, works minimized)"},
-             {"value": "mss",   "label": "mss (screen region)"},
-         ]},
-        {"name": "bring_to_front", "type": "bool", "label": "Bring to Front (dxcam only)",
-         "default": True},
-        {"name": "preview_size", "type": "int", "label": "Preview Width (px)",
-         "default": 320, "min": 64, "max": 1920},
+        {
+            "name": "window_title",
+            "type": "string",
+            "label": "Window Title",
+            "default": "",
+            "placeholder": "e.g. Notepad, Wuthering Waves",
+        },
+        {
+            "name": "capture_method",
+            "type": "select",
+            "label": "Capture Method",
+            "default": "dxcam",
+            "options": [
+                {"value": "dxcam", "label": "dxcam (DirectX, needs visible)"},
+                {"value": "wgc", "label": "WGC (background, no focus)"},
+                {"value": "bitblt", "label": "BitBlt (GDI, works minimized)"},
+                {"value": "mss", "label": "mss (screen region)"},
+            ],
+        },
+        {
+            "name": "bring_to_front",
+            "type": "bool",
+            "label": "Bring to Front (dxcam only)",
+            "default": True,
+        },
+        {
+            "name": "preview_size",
+            "type": "int",
+            "label": "Preview Width (px)",
+            "default": 320,
+            "min": 64,
+            "max": 1920,
+        },
     ]
 
     async def execute(self, inputs: dict, config: dict) -> dict:
@@ -66,24 +87,25 @@ class WindowScreenshotNode(BaseNode):
 
         if method == "dxcam":
             return self._capture_dxcam(hwnd, left, top, cw, ch, preview_w, bring_front)
-        elif method == "wgc":
-            return self._capture_wgc(hwnd, left, top, cw, ch, preview_w)
-        elif method == "bitblt":
+        if method == "wgc":
+            return self._capture_wgc(hwnd, cw, ch, preview_w)
+        if method == "bitblt":
             return self._capture_bitblt(hwnd, cw, ch, preview_w)
-        else:
-            return self._capture_mss(left, top, cw, ch, preview_w)
+        return self._capture_mss(left, top, cw, ch, preview_w)
 
-    # ── WGC capture (window-level, works occluded/minimized) ──
-
-    def _capture_wgc(self, hwnd, left, top, cw, ch, preview_w):
+    def _capture_wgc(self, hwnd, cw, ch, preview_w):
         import ctypes
         import ctypes.wintypes
-        import tempfile
-        import numpy as np
         import os
+        import tempfile
+        import time as _time
 
-        dll_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                "capture", "wgc_capture.dll")
+        import numpy as np
+        from PIL import Image
+
+        from engine.utils.win_utils import restore_window
+
+        dll_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "capture", "wgc_capture.dll")
         if not os.path.exists(dll_path):
             raise RuntimeError(f"WGC DLL not found: {dll_path}")
 
@@ -104,15 +126,16 @@ class WindowScreenshotNode(BaseNode):
         h = ctypes.c_int()
         stride = ctypes.c_int()
 
-        import time as _time
-
-        # Retry loop: wait for window to be un-minimized (code -6)
-        for attempt in range(60):  # up to 30 seconds
+        for _ in range(60):  # up to 30 seconds
             ret = dll.wgc_capture(
                 ctypes.wintypes.HWND(hwnd),
-                ctypes.byref(buf), ctypes.byref(w), ctypes.byref(h), ctypes.byref(stride),
+                ctypes.byref(buf),
+                ctypes.byref(w),
+                ctypes.byref(h),
+                ctypes.byref(stride),
             )
-            if ret == -6:  # Window minimized — wait and retry
+            if ret == -6:
+                restore_window(hwnd)
                 _time.sleep(0.5)
                 continue
             break
@@ -121,31 +144,32 @@ class WindowScreenshotNode(BaseNode):
             raise RuntimeError(f"WGC capture failed (code {ret})")
 
         try:
-            PBYTE = ctypes.POINTER(ctypes.c_uint8)
-            data = ctypes.cast(buf, PBYTE)
+            pbyte = ctypes.POINTER(ctypes.c_uint8)
+            data = ctypes.cast(buf, pbyte)
             arr = np.ctypeslib.as_array(data, (h.value, w.value, 4))
-            rgb = arr[:, :, [2, 1, 0]].copy()  # BGRA -> RGB
+            rgb = arr[:, :, [2, 1, 0]].copy()
         finally:
             dll.wgc_free(buf)
 
-        from PIL import Image
         img = Image.fromarray(rgb)
         tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         img.save(tmp.name)
         tmp.close()
 
         return {
-            "image": tmp.name, "img_path": tmp.name,
-            "width": w.value, "height": h.value,
+            "image": tmp.name,
+            "img_path": tmp.name,
+            "width": w.value,
+            "height": h.value,
             "_preview_image": self._to_preview(img, preview_w),
         }
-
-    # ── dxcam capture (DirectX, needs visible window) ──
 
     def _capture_dxcam(self, hwnd, left, top, cw, ch, preview_w, bring_front):
         import ctypes
         import tempfile
         import time
+
+        from PIL import Image
 
         if cw <= 0 or ch <= 0:
             raise RuntimeError(f"Window has invalid client size ({cw}x{ch})")
@@ -160,8 +184,8 @@ class WindowScreenshotNode(BaseNode):
 
         try:
             import dxcam
-        except ImportError:
-            raise RuntimeError("dxcam required: pip install dxcam")
+        except ImportError as exc:
+            raise RuntimeError("dxcam required: pip install dxcam") from exc
 
         camera = dxcam.create()
         try:
@@ -176,28 +200,30 @@ class WindowScreenshotNode(BaseNode):
         if frame is None:
             raise RuntimeError("dxcam capture returned no frame")
 
-        from PIL import Image
         img = Image.fromarray(frame)
         tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         img.save(tmp.name)
         tmp.close()
 
         return {
-            "image": tmp.name, "img_path": tmp.name,
-            "width": cw, "height": ch,
+            "image": tmp.name,
+            "img_path": tmp.name,
+            "width": cw,
+            "height": ch,
             "_preview_image": self._to_preview(img, preview_w),
         }
-
-    # ── BitBlt capture (GDI windows, works minimized) ──
 
     def _capture_bitblt(self, hwnd, cw, ch, preview_w):
         import ctypes
         import tempfile
 
+        import win32con
+        import win32gui
+        import win32ui
+        from PIL import Image
+
         if cw <= 0 or ch <= 0:
             raise RuntimeError(f"Window has invalid size ({cw}x{ch})")
-
-        import win32gui, win32ui, win32con
 
         hwnd_dc = win32gui.GetWindowDC(hwnd)
         mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
@@ -211,11 +237,17 @@ class WindowScreenshotNode(BaseNode):
         if not result:
             save_dc.BitBlt((0, 0), (cw, ch), mfc_dc, (0, 0), win32con.SRCCOPY)
 
-        from PIL import Image
         bmp_info = bmp.GetInfo()
         bmp_bits = bmp.GetBitmapBits(True)
-        img = Image.frombuffer("RGB", (bmp_info["bmWidth"], bmp_info["bmHeight"]),
-                               bmp_bits, "raw", "BGRX", 0, 1)
+        img = Image.frombuffer(
+            "RGB",
+            (bmp_info["bmWidth"], bmp_info["bmHeight"]),
+            bmp_bits,
+            "raw",
+            "BGRX",
+            0,
+            1,
+        )
 
         save_dc.DeleteDC()
         mfc_dc.DeleteDC()
@@ -227,16 +259,18 @@ class WindowScreenshotNode(BaseNode):
         tmp.close()
 
         return {
-            "image": tmp.name, "img_path": tmp.name,
-            "width": cw, "height": ch,
+            "image": tmp.name,
+            "img_path": tmp.name,
+            "width": cw,
+            "height": ch,
             "_preview_image": self._to_preview(img, preview_w),
         }
 
-    # ── mss region capture (visible windows only) ──
-
     def _capture_mss(self, left, top, cw, ch, preview_w):
-        import mss, mss.tools
         import tempfile
+
+        import mss
+        import mss.tools
 
         with mss.mss() as sct:
             shot = sct.grab({"left": left, "top": top, "width": cw, "height": ch})
@@ -246,25 +280,26 @@ class WindowScreenshotNode(BaseNode):
 
             try:
                 from PIL import Image
+
                 img = Image.frombytes("RGB", shot.size, shot.rgb)
                 preview = self._to_preview(img, preview_w)
             except Exception:
                 preview = ""
 
         return {
-            "image": tmp.name, "img_path": tmp.name,
-            "width": cw, "height": ch,
+            "image": tmp.name,
+            "img_path": tmp.name,
+            "width": cw,
+            "height": ch,
             "_preview_image": preview,
         }
-
-    # ── Preview helper ──
 
     def _to_preview(self, img, max_w: int = 320) -> str:
         try:
             ratio = max_w / max(img.width, 1)
-            img = img.resize((max_w, int(img.height * ratio)))
+            resized = img.resize((max_w, int(img.height * ratio)))
             buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=70)
+            resized.save(buf, format="JPEG", quality=70)
             return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode()}"
         except Exception:
             return ""

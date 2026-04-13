@@ -8,17 +8,24 @@ interface NodeState {
   outputs: Record<string, unknown>;
 }
 
+export interface ExecutionNotice {
+  kind: "info" | "success" | "error";
+  message: string;
+}
+
 interface ExecutionState {
   isRunning: boolean;
   currentExecutionId: string | null;
   loopIteration: number;
-  nodeStates: Record<string, NodeState>;   // nodeId → state
+  nodeStates: Record<string, NodeState>;
+  notice: ExecutionNotice | null;
 
-  // Actions
   setRunning: (running: boolean, executionId?: string) => void;
   setNodeStatus: (nodeId: string, status: NodeStatus, extra?: Partial<NodeState>) => void;
   setNodeOutput: (nodeId: string, port: string, value: unknown) => void;
   setLoopIteration: (n: number) => void;
+  setNotice: (notice: ExecutionNotice | null) => void;
+  clearNotice: () => void;
   clearAll: () => void;
 }
 
@@ -27,6 +34,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   currentExecutionId: null,
   loopIteration: 0,
   nodeStates: {},
+  notice: null,
 
   setRunning: (running, executionId) =>
     set({
@@ -59,6 +67,10 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   },
 
   setLoopIteration: (n) => set({ loopIteration: n }),
+
+  setNotice: (notice) => set({ notice }),
+
+  clearNotice: () => set({ notice: null }),
 
   clearAll: () =>
     set({ nodeStates: {}, isRunning: false, currentExecutionId: null, loopIteration: 0 }),

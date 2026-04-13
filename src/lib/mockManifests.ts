@@ -199,6 +199,24 @@ export const MOCK_MANIFESTS: NodeManifest[] = [
     ],
   },
   {
+    type: "ww_preflight", label: "WW: Preflight", category: "Game", volatile: true,
+    inputs: [{ name: "trigger", type: "ANY", label: "Trigger", optional: true }],
+    outputs: [
+      { name: "ready", type: "BOOL", label: "Ready" },
+      { name: "message", type: "STRING", label: "Message" },
+      { name: "window_found", type: "BOOL", label: "Window Found" },
+      { name: "was_minimized", type: "BOOL", label: "Was Minimized" },
+      { name: "can_capture", type: "BOOL", label: "Can Capture" },
+      { name: "can_control", type: "BOOL", label: "Can Control" },
+      { name: "background_mode", type: "BOOL", label: "Background Mode" },
+      { name: "is_admin", type: "BOOL", label: "Is Admin" },
+      { name: "target_elevated", type: "BOOL", label: "Target Elevated" },
+    ],
+    config_schema: [
+      { name: "window_title", type: "string", label: "Window Title", default: "Wuthering Waves" },
+    ],
+  },
+  {
     type: "ww_ensure_main", label: "WW: Ensure Main", category: "Game", volatile: true,
     inputs: [{ name: "trigger", type: "ANY", label: "Trigger", optional: true }],
     outputs: [{ name: "success", type: "BOOL", label: "Success" }],
