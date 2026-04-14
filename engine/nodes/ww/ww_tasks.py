@@ -39,7 +39,7 @@ class _WW:
 
     async def screenshot(self) -> str:
         """Take a WGC screenshot with retry on failure."""
-        from engine.nodes.window_screenshot import WindowScreenshotNode
+        from engine.nodes.capture.window_screenshot import WindowScreenshotNode
 
         ss = WindowScreenshotNode()
         for attempt in range(3):
@@ -123,7 +123,7 @@ class _WW:
     ) -> list[dict]:
         """Run OCR on the current screenshot, optionally cropped to a region."""
         from PIL import Image
-        from engine.nodes.ocr import OcrNode
+        from engine.nodes.ai.ocr import OcrNode
         import tempfile
 
         shot = await self.screenshot()
@@ -148,7 +148,7 @@ class _WW:
         return blocks
 
     async def send_key(self, key: str, after_sleep: float = 1.0):
-        from engine.nodes.game_key import GameKeyNode
+        from engine.nodes.game.game_key import GameKeyNode
 
         node = GameKeyNode()
         await node.execute(
@@ -163,7 +163,7 @@ class _WW:
         )
 
     async def send_key_down(self, key: str):
-        from engine.nodes.game_key import GameKeyNode
+        from engine.nodes.game.game_key import GameKeyNode
 
         node = GameKeyNode()
         await node.execute(
@@ -178,7 +178,7 @@ class _WW:
         )
 
     async def send_key_up(self, key: str):
-        from engine.nodes.game_key import GameKeyNode
+        from engine.nodes.game.game_key import GameKeyNode
 
         node = GameKeyNode()
         await node.execute(
@@ -194,7 +194,7 @@ class _WW:
 
     async def click(self, x: float, y: float, after_sleep: float = 0.5):
         """Click at normalized client coordinates."""
-        from engine.nodes.game_click import GameClickNode
+        from engine.nodes.game.game_click import GameClickNode
 
         node = GameClickNode()
         await node.execute(
@@ -212,7 +212,7 @@ class _WW:
 
     async def click_abs(self, x: int, y: int, after_sleep: float = 0.5):
         """Click at absolute client coordinates."""
-        from engine.nodes.game_click import GameClickAbsNode
+        from engine.nodes.game.game_click import GameClickAbsNode
 
         node = GameClickAbsNode()
         await node.execute(
@@ -402,7 +402,7 @@ class WWPreflightNode(BaseNode):
     ]
 
     async def execute(self, inputs: dict, config: dict) -> dict:
-        from engine.nodes.window_screenshot import WindowScreenshotNode
+        from engine.nodes.capture.window_screenshot import WindowScreenshotNode
         from engine.utils.win_utils import (
             find_hwnd,
             get_window_process_id,

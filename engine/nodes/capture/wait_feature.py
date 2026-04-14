@@ -135,7 +135,7 @@ class WaitFeatureNode(BaseNode):
 
     async def _take_screenshot(self, title: str, config: dict) -> str:
         """Delegate to WindowScreenshotNode for actual capture."""
-        from engine.nodes.window_screenshot import WindowScreenshotNode
+        from engine.nodes.capture.window_screenshot import WindowScreenshotNode
         ss = WindowScreenshotNode()
         capture_method = config.get("capture_method", "dxcam")
         result = await ss.execute(
