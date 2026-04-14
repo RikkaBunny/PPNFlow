@@ -11,7 +11,7 @@ if not ctypes.windll.shell32.IsUserAnAdmin():
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from engine.nodes.ww_tasks import (  # noqa: E402
+from engine.nodes.ww.ww_tasks import (  # noqa: E402
     WWClaimBattlePassNode,
     WWClaimDailyNode,
     WWClaimMailNode,

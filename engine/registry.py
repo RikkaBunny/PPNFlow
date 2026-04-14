@@ -13,15 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 def load_all_nodes() -> None:
-    """Import every module in engine/nodes/ to trigger @register_node decorators."""
+    """Recursively import every module under engine/nodes/ to trigger @register_node decorators."""
     nodes_pkg_path = Path(__file__).parent / "nodes"
-    for finder, module_name, _ in pkgutil.iter_modules([str(nodes_pkg_path)]):
-        full_name = f"engine.nodes.{module_name}"
+    prefix = "engine.nodes."
+    for _finder, module_name, is_pkg in pkgutil.walk_packages([str(nodes_pkg_path)], prefix=prefix):
+        if is_pkg:
+            continue
         try:
-            importlib.import_module(full_name)
-            logger.debug(f"Loaded node module: {full_name}")
+            importlib.import_module(module_name)
+            logger.debug(f"Loaded node module: {module_name}")
         except Exception as e:
-            logger.warning(f"Failed to load node module {full_name}: {e}")
+            logger.warning(f"Failed to load node module {module_name}: {e}")
 
 
 def get_all_schemas() -> list[dict]:
